@@ -235,14 +235,14 @@ Goal: prove **Arduino → Node → WebSocket → React** with a single sensor (`
 
 **Commit checkpoint C1b**: `feat(frontend): WS hook, connection bar, ultrasonic widget via registry`.
 
-**Step 1.11 — Arduino sketch (ultrasonic).** `arduino/sensor_dashboard/sensor_dashboard.ino`
-- Minimal sketch: read HC-SR04, every 50 ms `Serial.println` a protocol line `DIST:<cm>,TS:<millis>` at `115200`. Comment the wiring (trig/echo pins, 5V/GND) and the protocol.
-- Structure it for extension: a clearly-marked section where future sensors append `KEY:VALUE` to the line buffer before printing. Keep the frame assembly in one place (a single `String`/`char[]` builder), print exactly one `\n`-terminated line per cycle.
-- Header comment must document: HC-SR04 pin wiring, board = Arduino Uno R4 (Renesas core `arduino:renesas_uno`), baud 115200, and the exact expected output line format.
-- This sketch **will be flashed and verified on real hardware** in Step 1.12. Write it to be flash-ready (valid `setup()`/`loop()`, no pseudo-code).
-- DoD: sketch present, protocol-accurate, wiring documented, compiles clean.
+**Step 1.11 — Arduino protocol spec (human writes the sketch).** `arduino/PROTOCOL_SPEC.md`
+- **Change from original plan**: the human is writing `arduino/sensor_dashboard/sensor_dashboard.ino` themselves, for C++ practice. Claude Code does **not** generate the `.ino` file.
+- Instead, Claude Code writes `arduino/PROTOCOL_SPEC.md`: a precise, backend-derived spec of exactly what the sketch must emit — baud rate, line format/timing, exact key names + value types the parser recognizes this phase, line-ending expectations, parser edge cases that matter at the sketch level, and an HC-SR04 wiring reference (non-prescriptive on pin choice).
+- `arduino/sensor_dashboard/` stays an empty directory (tracked via `.gitkeep`) until the human adds the sketch.
+- **Review gate**: once the human shares the sketch, Claude Code reviews it for protocol compliance and correctness (matches `PROTOCOL_SPEC.md`, compiles clean, wiring documented) before committing C1c — Claude Code does not write the sketch, only reviews it.
+- DoD: `PROTOCOL_SPEC.md` present and precise enough that a sketch written against it parses correctly against `parser.js` with zero parser changes.
 
-**Commit checkpoint C1c**: `feat(arduino): ultrasonic sketch emitting DIST protocol frames`.
+**Commit checkpoint C1c**: `docs(arduino): protocol spec for human-authored ultrasonic sketch` (spec only). A follow-up commit adds the human-written, Claude-reviewed sketch once shared.
 
 #### 1H. Real-hardware bring-up (human-in-the-loop — the true Phase-1 proof)
 
@@ -388,8 +388,8 @@ Specified for later; not this pass:
 1. **Step 0.0 first**: switch runtime to Node LTS (24 or 22) via `nvm`, add `.nvmrc`. Then Phase 0 scaffold (`.gitignore`, `.env.example`, `README`, `CLAUDE.md`, root scripts, dirs) → **commit C0**.
 2. Backend: `package.json` → `config.js` → **`parser.test.js` (write tests first)** → `parser.js` → `sources/` (mock first, real lazy) → `server.js`/`index.js` (with `app.use(cors())`). Run Vitest; get 1.T1–1.T3 green. Verify mock frames via a scratch WS client. → **commit C1a**.
 3. Frontend: Vite+Tailwind+Recharts scaffold → `useSensorSocket` hook → connection bar → ultrasonic raw display → refactor into `widgets/` registry + grid. Verify E2E in mock mode (1.T4), reconnect (1.T5), build (1.T7). → **commit C1b**.
-4. Arduino ultrasonic sketch (flash-ready) → **commit C1c**.
-5. **Stop here.** Session 1 is a complete deliverable: the full software pipeline proven in mock mode, committed through C1c. Do not proceed to hardware unless the human is present with the board connected.
+4. Arduino protocol spec (`arduino/PROTOCOL_SPEC.md`, no `.ino` file) → **commit C1c**. **Human writes the sketch** against the spec for C++ practice; Claude Code reviews it for protocol compliance and correctness once shared, then a follow-up commit adds it.
+5. **Stop here.** Session 1 is a complete deliverable: the full software pipeline proven in mock mode, committed through C1c. Do not proceed to hardware unless the human is present with the board connected and the sketch has been written + reviewed.
 
 **Session 2 — Hardware bring-up (separate, human-attended; requires the Uno R4 physically connected):**
 6. Precheck: `node -v` is the LTS, mock track is green/committed, `ls /dev/cu.usbmodem*` shows a board. **Real-hardware bring-up (1H)**: human flashes via Arduino IDE (Uno R4 Renesas core) → verify raw serial monitor (rung 1) → backend real mode parses (rung 2) → browser widget tracks the physical sensor (rungs 3–4). Record notes in `CLAUDE.md` → **commit C1d**. Sequenced after the mock track so any failure is isolated to the hardware/serial layer.
