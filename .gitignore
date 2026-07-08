@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.local
+backend/sessions/*
+!backend/sessions/.gitkeep
+*.log
+.DS_Store

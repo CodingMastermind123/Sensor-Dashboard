@@ -1,0 +1,12 @@
+{
+  "name": "sensor-dashboard",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Grafana-style live dashboard for an Arduino Uno R4 sensor rig.",
+  "scripts": {
+    "dev": "npm --prefix backend run dev & npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "test": "npm --prefix backend test"
+  }
+}
