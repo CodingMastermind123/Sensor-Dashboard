@@ -1,12 +1,12 @@
-# Arduino Protocol Spec (Phase 1 — ultrasonic only)
+# Arduino Protocol Spec
 
 This spec is derived directly from what [`backend/src/parser.js`](../backend/src/parser.js)
 and [`backend/src/config.js`](../backend/src/config.js) already implement and expect. It exists
 so `arduino/sensor_dashboard/sensor_dashboard.ino` can be written by hand (see note below) and
 parse correctly against `parser.js` with **zero changes to the parser**.
 
-`arduino/sensor_dashboard/` is intentionally empty right now — the sketch will be added in a
-follow-up commit once written and reviewed for compliance against this spec.
+`sensor_dashboard.ino` currently emits `DIST` (Phase 1, flashed and verified on real hardware).
+§8 below is the Phase 2 addendum for adding `PIR` to the same sketch.
 
 ## 1. Serial connection
 
@@ -116,5 +116,38 @@ Per project decision, **the human writes `sensor_dashboard.ino` by hand** (for C
 rather than Claude Code generating it. Once written, share it for review: Claude Code will
 check it against this spec (protocol compliance — correct keys/types/timing/line-ending
 behavior, `Serial.begin(115200)`, valid `setup()`/`loop()`, wiring documented in a header
-comment) before it's committed as part of Phase 1 (commit C1c is this spec only; the sketch
-lands in a follow-up commit after review).
+comment) before it's committed. This applies to sketch updates in later phases too, not just
+the initial Phase 1 version — the same review-before-commit loop repeats for `PIR` below,
+and for each sensor after it.
+
+## 8. Phase 2 addendum: PIR
+
+The backend/frontend side of `PIR` is already built and committed — mock source emits it,
+`parseLine` already handles it (single int, no parser change needed), and the frontend has a
+`PirWidget` (status pulse + motion-event log, not a line chart, since PIR is on/off). This
+section is what the **sketch** needs to add.
+
+- **Key**: `PIR`, single value, **int** — `0` (no motion) or `1` (motion). Parses via the same
+  int-coercion path as everything else (`/^-?\d+$/`), so just print the digital pin's read
+  value directly: `Serial.print(digitalRead(pirPin))` gives you `0` or `1` already, no
+  conversion needed.
+- **Append to the same line, same cadence** — do not print `PIR` on its own line or on a
+  different cycle than `DIST`. One combined line per cycle, e.g.:
+  ```
+  DIST:23.4,PIR:1,TS:10234
+  ```
+  Key order within the line doesn't matter to the parser (it's comma-split then colon-split
+  per token), but keep it consistent for readability.
+- **No debouncing/hold-time logic required in the sketch** — most PIR modules (e.g. HC-SR501)
+  already hold their output HIGH for a few seconds after a trigger via an onboard potentiometer,
+  so a raw `digitalRead()` each cycle is enough; the frontend's event log already derives
+  discrete "motion started" events by diffing consecutive `0`→`1` readings, it doesn't need the
+  sketch to do that debouncing.
+- **Wiring reference (non-prescriptive, your pin choice)**: common PIR modules (e.g. HC-SR501)
+  are 3-pin — VCC (5V), GND, and a digital OUT pin that goes HIGH on motion. OUT is a clean
+  digital logic level (no `pulseIn`/analog conversion needed, unlike the HC-SR04) — just
+  `pinMode(pirPin, INPUT)` and `digitalRead(pirPin)`. Many modules need a several-second warm-up
+  after power-on before readings stabilize — don't be surprised by spurious `1`s in the first
+  ~10-60s, that's the sensor calibrating, not a wiring bug.
+- Update the header comment's wiring section to add the new pin, same as the existing
+  Trig/Echo entries.
