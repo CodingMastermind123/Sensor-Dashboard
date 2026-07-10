@@ -98,12 +98,21 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   always re-run `ls /dev/cu.usbmodem*` or `GET /ports` rather than assuming this literal path).
 - **Node version used for real mode**: v24.18.0 (the pinned `.nvmrc` LTS) — `serialport` loaded
   and streamed cleanly, no native-build issues.
-- **Wiring used**: HC-SR04 VCC→5V, GND→GND, Trig→A1, Echo→A2 (see header comment in
-  `arduino/sensor_dashboard/sensor_dashboard.ino`).
-- **Sensor floor is ~2cm**: the sketch only emits a `DIST` line when `2 < distance < 400`, so
-  readings at/below 2cm are dropped rather than emitted as noise — this is by design (also
-  roughly the HC-SR04's physical minimum range), not a parsing or wiring bug.
-- Verified the full ladder: raw serial monitor showed correct changing `DIST:<cm>,TS:<millis>`
-  frames → backend in `SERIAL_SOURCE=real` mode parsed them (`/health` reported
-  `connected:true`, source `real`) → the browser Ultrasonic widget tracked the physical sensor
-  live, moving with a hand in front of the sensor.
+- **Wiring used (current, post-PIR-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3, Echo→pin 4;
+  PIR VCC→5V, GND→GND, OUT→pin 2 (see header comment in
+  `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were originally on A1/A2 during
+  the Phase 1 DIST-only bring-up and were moved to digital pins 3/4 when PIR was added.
+- **Sensor floor is ~2cm**: the sketch only emits `DIST:` when `2 < distance < 400`; readings
+  at/below 2cm are dropped rather than emitted as noise — by design (also roughly the HC-SR04's
+  physical minimum range), not a parsing or wiring bug.
+- **`DIST` and `PIR` are decoupled**: `PIR` (and `TS`) are appended to every line regardless of
+  whether the ultrasonic reading was valid that cycle; `DIST:` is simply omitted (not zeroed)
+  when out of range. A line can therefore look like `PIR:0,TS:12345` (no `DIST`) or
+  `DIST:23.4,PIR:0,TS:12345`. The parser and frontend already handle a missing key on a given
+  frame by keeping the last known value — verified real lines of both shapes parsed correctly
+  and neither dropped nor corrupted the other sensor's data.
+- Verified the full ladder twice — once for DIST-only (Phase 1), once again after adding PIR
+  (Phase 2): raw serial monitor showed correct frames → backend in `SERIAL_SOURCE=real` mode
+  parsed them (`/health` reported `connected:true`, source `real`) → the browser widgets
+  tracked the physical sensors live (Ultrasonic chart moved with a hand in front of the
+  HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a hand wave).
