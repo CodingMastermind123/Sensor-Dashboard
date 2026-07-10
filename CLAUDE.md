@@ -92,5 +92,18 @@ Command (client → server, Phase 3+):
 
 ## Hardware bring-up notes
 
-(Filled in during Phase 1 Session 2 / Step 1.12–1.14 once the Uno R4 is flashed and verified:
-exact board package version, port pattern seen, Node version used for real mode, wiring notes.)
+Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R4 + HC-SR04:
+
+- **Port pattern seen**: `/dev/cu.usbmodem3CDC7545DB0C2` (the exact suffix is per-device/per-USB-port;
+  always re-run `ls /dev/cu.usbmodem*` or `GET /ports` rather than assuming this literal path).
+- **Node version used for real mode**: v24.18.0 (the pinned `.nvmrc` LTS) — `serialport` loaded
+  and streamed cleanly, no native-build issues.
+- **Wiring used**: HC-SR04 VCC→5V, GND→GND, Trig→A1, Echo→A2 (see header comment in
+  `arduino/sensor_dashboard/sensor_dashboard.ino`).
+- **Sensor floor is ~2cm**: the sketch only emits a `DIST` line when `2 < distance < 400`, so
+  readings at/below 2cm are dropped rather than emitted as noise — this is by design (also
+  roughly the HC-SR04's physical minimum range), not a parsing or wiring bug.
+- Verified the full ladder: raw serial monitor showed correct changing `DIST:<cm>,TS:<millis>`
+  frames → backend in `SERIAL_SOURCE=real` mode parsed them (`/health` reported
+  `connected:true`, source `real`) → the browser Ultrasonic widget tracked the physical sensor
+  live, moving with a hand in front of the sensor.
