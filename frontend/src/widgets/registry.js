@@ -1,4 +1,5 @@
 import UltrasonicWidget from './UltrasonicWidget.jsx'
+import PirWidget from './PirWidget.jsx'
 
 /**
  * Maps a widget id to its component + metadata. Adding a sensor widget later is a
@@ -11,5 +12,12 @@ export const registry = [
     accentColor: '#22d3ee',
     visible: true,
     Component: UltrasonicWidget,
+  },
+  {
+    id: 'pir',
+    title: 'PIR Motion',
+    accentColor: '#f97316',
+    visible: true,
+    Component: PirWidget,
   },
 ]

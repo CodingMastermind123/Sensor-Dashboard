@@ -34,4 +34,22 @@ describe('mockSource', () => {
     expect(status.connected).toBe(true);
     expect(status.port).toBe('mock');
   });
+
+  it('includes a PIR key (0 or 1) on every emitted line', async () => {
+    source = createMockSource({ frameMs: 5 });
+
+    const lines = await new Promise((resolve) => {
+      const collected = [];
+      source.on('line', (line) => {
+        collected.push(line);
+        if (collected.length >= 10) resolve(collected);
+      });
+      source.start();
+    });
+
+    for (const line of lines) {
+      const parsed = parseLine(line);
+      expect([0, 1]).toContain(parsed.data.PIR);
+    }
+  });
 });
