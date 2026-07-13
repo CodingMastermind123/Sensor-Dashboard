@@ -4,6 +4,10 @@ import WidgetCard from '../components/WidgetCard.jsx'
 
 const ACCENT = '#22d3ee'
 const STALE_MS = 2000
+// Fixed (not auto-scaled) chart range in cm. Auto-scaling to the full buffer let a single
+// startup-settling outlier (e.g. an early ~375cm reading) blow out the axis and flatten every
+// normal desk-range reading to the bottom. Adjust if the sensor is used at longer range.
+const Y_DOMAIN = [0, 150]
 
 function UltrasonicWidget({ latestByKey, historyByKey }) {
   // Re-renders periodically so staleness reflects frames that *stopped* arriving,
@@ -36,7 +40,7 @@ function UltrasonicWidget({ latestByKey, historyByKey }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={history}>
             <XAxis dataKey="t" hide />
-            <YAxis domain={['dataMin - 5', 'dataMax + 5']} width={32} tick={{ fontSize: 10, fill: '#737373' }} />
+            <YAxis domain={Y_DOMAIN} width={32} tick={{ fontSize: 10, fill: '#737373' }} />
             <Tooltip
               contentStyle={{ background: '#171717', border: '1px solid #404040', fontSize: 12 }}
               labelFormatter={() => ''}

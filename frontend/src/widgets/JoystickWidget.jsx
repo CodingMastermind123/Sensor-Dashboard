@@ -2,9 +2,12 @@ import { useEffect, useRef } from 'react'
 import WidgetCard from '../components/WidgetCard.jsx'
 
 const ACCENT = '#a78bfa'
+const ACCENT_RGB = '167, 139, 250'
 const SIZE = 180
 const RANGE_MAX = 1023
 const LERP = 0.25
+const TRAIL_LENGTH = 20
+const TRAIL_MAX_ALPHA = 0.5
 
 /**
  * 2D canvas dot tracking the joystick's raw {x,y} (0-1023 analog range) in real time.
@@ -15,11 +18,15 @@ function JoystickWidget({ latestByKey }) {
   const canvasRef = useRef(null)
   const targetRef = useRef({ x: RANGE_MAX / 2, y: RANGE_MAX / 2 })
   const posRef = useRef({ x: RANGE_MAX / 2, y: RANGE_MAX / 2 })
+  // Raw (unsmoothed) recent readings, oldest first — makes jitter/noise around center
+  // visible as a small spread rather than a single static-looking dot.
+  const trailRef = useRef([])
 
   useEffect(() => {
     const joy = latestByKey.JOY
     if (joy && typeof joy.x === 'number' && typeof joy.y === 'number') {
       targetRef.current = joy
+      trailRef.current = [...trailRef.current, joy].slice(-TRAIL_LENGTH)
     }
   }, [latestByKey.JOY])
 
@@ -53,6 +60,16 @@ function JoystickWidget({ latestByKey }) {
       ctx.moveTo(0, SIZE / 2)
       ctx.lineTo(SIZE, SIZE / 2)
       ctx.stroke()
+
+      const trail = trailRef.current
+      trail.forEach((p, i) => {
+        const alpha = ((i + 1) / trail.length) * TRAIL_MAX_ALPHA
+        const { cx: tx, cy: ty } = toCanvas(p.x, p.y)
+        ctx.fillStyle = `rgba(${ACCENT_RGB}, ${alpha})`
+        ctx.beginPath()
+        ctx.arc(tx, ty, 5, 0, Math.PI * 2)
+        ctx.fill()
+      })
 
       const { cx, cy } = toCanvas(pos.x, pos.y)
       ctx.fillStyle = ACCENT

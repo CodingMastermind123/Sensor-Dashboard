@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080'
-const HISTORY_CAP = 300
+// 600 comfortably covers a 30s rolling window (PirWidget's strip) even at ~60ms cadence,
+// while still bounding memory — never an unbounded array.
+const HISTORY_CAP = 600
 const RECONNECT_MIN_MS = 500
 const RECONNECT_MAX_MS = 5000
 

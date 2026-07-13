@@ -1,17 +1,23 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import WidgetCard from '../components/WidgetCard.jsx'
 
 const ACCENT = '#f97316'
 const MAX_EVENTS = 10
+const STRIP_WIDTH = 260
+const STRIP_HEIGHT = 28
+const STRIP_WINDOW_MS = 30000
+const TICK_WIDTH = 2
 
 /**
  * PIR is an on/off event source, not a continuous signal — no line chart (per spec).
- * Shows a live status pulse plus a timestamped log of 0->1 motion-start events, derived
- * by diffing the bounded PIR history the socket hook already keeps.
+ * Shows a live status pulse, a timestamped log of 0->1 motion-start events, and a rolling
+ * EKG-strip-style view of the raw HIGH/LOW signal (every reading, not just transitions) so
+ * patterns like periodic false-triggering vs. genuine one-off motion are visible at a glance.
  */
 function PirWidget({ latestByKey, historyByKey }) {
   const active = latestByKey.PIR === 1
   const history = historyByKey.PIR ?? []
+  const canvasRef = useRef(null)
 
   const events = useMemo(() => {
     const rising = []
@@ -19,6 +25,23 @@ function PirWidget({ latestByKey, historyByKey }) {
       if (history[i - 1].v === 0 && history[i].v === 1) rising.push(history[i].t)
     }
     return rising.slice(-MAX_EVENTS).reverse()
+  }, [history])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, STRIP_WIDTH, STRIP_HEIGHT)
+
+    const now = Date.now()
+    for (const point of history) {
+      const age = now - point.t
+      if (age > STRIP_WINDOW_MS || age < 0) continue
+      // Newest reading at the right edge, oldest at the left — scrolls like an EKG strip.
+      const x = STRIP_WIDTH * (1 - age / STRIP_WINDOW_MS)
+      ctx.fillStyle = point.v === 1 ? ACCENT : '#404040'
+      ctx.fillRect(x, 0, TICK_WIDTH, STRIP_HEIGHT)
+    }
   }, [history])
 
   return (
@@ -32,6 +55,16 @@ function PirWidget({ latestByKey, historyByKey }) {
         <span className="text-lg font-semibold text-neutral-100">
           {active ? 'Motion detected' : 'Idle'}
         </span>
+      </div>
+
+      <div className="mb-3">
+        <canvas
+          ref={canvasRef}
+          width={STRIP_WIDTH}
+          height={STRIP_HEIGHT}
+          className="rounded border border-neutral-800 bg-neutral-950"
+        />
+        <div className="mt-1 text-[10px] text-neutral-600">last 30s (raw signal)</div>
       </div>
 
       <div className="text-xs text-neutral-500">
