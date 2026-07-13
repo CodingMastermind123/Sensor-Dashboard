@@ -1,5 +1,6 @@
 import UltrasonicWidget from './UltrasonicWidget.jsx'
 import PirWidget from './PirWidget.jsx'
+import JoystickWidget from './JoystickWidget.jsx'
 
 /**
  * Maps a widget id to its component + metadata. Adding a sensor widget later is a
@@ -19,5 +20,12 @@ export const registry = [
     accentColor: '#f97316',
     visible: true,
     Component: PirWidget,
+  },
+  {
+    id: 'joystick',
+    title: 'Joystick (JOY)',
+    accentColor: '#a78bfa',
+    visible: true,
+    Component: JoystickWidget,
   },
 ]

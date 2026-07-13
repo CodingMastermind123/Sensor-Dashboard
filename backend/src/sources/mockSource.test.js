@@ -52,4 +52,26 @@ describe('mockSource', () => {
       expect([0, 1]).toContain(parsed.data.PIR);
     }
   });
+
+  it('includes a JOY:x:y key on every line, parsing to an {x,y} shape within 0-1023', async () => {
+    source = createMockSource({ frameMs: 5 });
+
+    const lines = await new Promise((resolve) => {
+      const collected = [];
+      source.on('line', (line) => {
+        collected.push(line);
+        if (collected.length >= 10) resolve(collected);
+      });
+      source.start();
+    });
+
+    for (const line of lines) {
+      const parsed = parseLine(line);
+      expect(parsed.data.JOY).toBeTypeOf('object');
+      expect(parsed.data.JOY.x).toBeGreaterThanOrEqual(0);
+      expect(parsed.data.JOY.x).toBeLessThanOrEqual(1023);
+      expect(parsed.data.JOY.y).toBeGreaterThanOrEqual(0);
+      expect(parsed.data.JOY.y).toBeLessThanOrEqual(1023);
+    }
+  });
 });
