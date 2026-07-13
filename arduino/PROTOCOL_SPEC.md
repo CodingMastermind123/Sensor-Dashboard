@@ -151,3 +151,36 @@ section is what the **sketch** needs to add.
   ~10-60s, that's the sensor calibrating, not a wiring bug.
 - Update the header comment's wiring section to add the new pin, same as the existing
   Trig/Echo entries.
+
+## 9. Phase 2 addendum: Joystick (JOY)
+
+Backend/frontend support is already built and committed — mock source emits `JOY:x:y`,
+`parseLine` already maps it to a named `{x, y}` shape via `KNOWN_MULTI` (no parser change
+needed), and the frontend has a `JoystickWidget` (2D canvas dot, `requestAnimationFrame`-driven).
+This is what the **sketch** needs to add.
+
+- **Key**: `JOY`, two values, colon-separated: `JOY:<x>:<y>`. Both `x` and `y` are read via
+  `analogRead()` on two analog pins — a standard 10-bit Arduino ADC read, so each value is an
+  **int in the range 0-1023** (0 = one extreme, 1023 = the other, ~512 = centered/at-rest for a
+  typical spring-loaded joystick module). Just print `Serial.print(analogRead(joyXPin))` and
+  `Serial.print(analogRead(joyYPin))` directly — no conversion needed, matches the mock's range
+  exactly.
+- **Append to the same line, same cadence** as `DIST`/`PIR`/`TS` — one combined line per cycle:
+  ```
+  DIST:23.4,PIR:0,JOY:512:489,TS:10234
+  ```
+  The parser splits each `KEY:...` token on `:` and takes everything after the key as the value
+  list, so `JOY:512:489` correctly becomes `{x: 512, y: 489}` — don't add a third value or
+  change the separator, the multi-value handling here is specifically wired for exactly two.
+- **Should `JOY` be gated behind anything, like `DIST` is?** No — unlike the ultrasonic reading,
+  an `analogRead()` on an idle/centered joystick is not an "invalid" state the way an
+  out-of-range echo is. Always include `JOY` on every line, unconditionally, the same way `PIR`
+  already is.
+- **Wiring reference (non-prescriptive, your pin choice)**: a standard 2-axis analog joystick
+  module has 5 pins — VCC (5V or 3.3V depending on module, check silkscreen/datasheet), GND, VRx
+  (X axis analog out), VRy (Y axis analog out), and often an SW (press-button, digital, active
+  LOW) pin — the button isn't part of this phase's protocol, ignore it for now unless you want
+  to fold it in as its own key later. Wire VRx/VRy to any two free **analog** pins (`A0`-`A5` on
+  the Uno R4) and read with `analogRead()` — no `pinMode()` call needed for analog input pins.
+- Update the header comment's wiring section to add the two new analog pins, same pattern as
+  the existing entries.
