@@ -31,8 +31,10 @@ function JoystickWidget({ latestByKey }) {
     function toCanvas(x, y) {
       return {
         cx: (x / RANGE_MAX) * SIZE,
-        // Invert Y so "up" on the stick is up on screen.
-        cy: SIZE - (y / RANGE_MAX) * SIZE,
+        // Direct mapping, no inversion — matches this joystick module's Y-axis wiring
+        // (raw value increases toward physical "down"). If a different module wires
+        // it the other way, flip this back to `SIZE - (y / RANGE_MAX) * SIZE`.
+        cy: (y / RANGE_MAX) * SIZE,
       }
     }
 

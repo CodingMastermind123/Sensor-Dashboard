@@ -98,10 +98,11 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   always re-run `ls /dev/cu.usbmodem*` or `GET /ports` rather than assuming this literal path).
 - **Node version used for real mode**: v24.18.0 (the pinned `.nvmrc` LTS) — `serialport` loaded
   and streamed cleanly, no native-build issues.
-- **Wiring used (current, post-PIR-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3, Echo→pin 4;
-  PIR VCC→5V, GND→GND, OUT→pin 2 (see header comment in
-  `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were originally on A1/A2 during
-  the Phase 1 DIST-only bring-up and were moved to digital pins 3/4 when PIR was added.
+- **Wiring used (current, post-Joystick-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3,
+  Echo→pin 4; PIR VCC→5V, GND→GND, OUT→pin 2; Joystick VCC→5V, GND→GND, VRx→A1, VRy→A0 (see
+  header comment in `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were originally
+  on A1/A2 during the Phase 1 DIST-only bring-up and were moved to digital pins 3/4 when PIR
+  was added.
 - **Sensor floor is ~2cm**: the sketch only emits `DIST:` when `2 < distance < 400`; readings
   at/below 2cm are dropped rather than emitted as noise — by design (also roughly the HC-SR04's
   physical minimum range), not a parsing or wiring bug.
@@ -111,8 +112,16 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   `DIST:23.4,PIR:0,TS:12345`. The parser and frontend already handle a missing key on a given
   frame by keeping the last known value — verified real lines of both shapes parsed correctly
   and neither dropped nor corrupted the other sensor's data.
-- Verified the full ladder twice — once for DIST-only (Phase 1), once again after adding PIR
-  (Phase 2): raw serial monitor showed correct frames → backend in `SERIAL_SOURCE=real` mode
-  parsed them (`/health` reported `connected:true`, source `real`) → the browser widgets
-  tracked the physical sensors live (Ultrasonic chart moved with a hand in front of the
-  HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a hand wave).
+- **Joystick canvas Y-axis is a direct (non-inverted) mapping**: `JoystickWidget.jsx` maps raw
+  `JOY.y` straight to canvas Y with no flip. This was originally inverted (assuming higher raw
+  value = physically "up"), but on the actual wired module, higher `y` corresponds to physically
+  "down" — real-hardware testing caught this (mock data alone can't, since the mock's random
+  walk has no real "up"/"down" to get backwards). If a differently-wired joystick module is
+  swapped in later and the dot moves opposite to the stick again, flip the sign back
+  (`SIZE - (y / RANGE_MAX) * SIZE`) — see the comment at the top of `toCanvas()`.
+- Verified the full ladder three times — DIST-only (Phase 1), then again after PIR (Phase 2),
+  then again after Joystick (Phase 2): raw serial monitor showed correct frames → backend in
+  `SERIAL_SOURCE=real` mode parsed them (`/health` reported `connected:true`, source `real`) →
+  the browser widgets tracked the physical sensors live (Ultrasonic chart moved with a hand in
+  front of the HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a
+  hand wave; Joystick dot tracked the physical stick in both axes after the Y-axis fix above).
