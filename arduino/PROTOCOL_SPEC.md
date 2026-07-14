@@ -184,3 +184,46 @@ This is what the **sketch** needs to add.
   the Uno R4) and read with `analogRead()` — no `pinMode()` call needed for analog input pins.
 - Update the header comment's wiring section to add the two new analog pins, same pattern as
   the existing entries.
+
+## 10. Phase 2 addendum: GY-87 (ROLL/PITCH/YAW)
+
+Backend/frontend support is already built and committed — mock source emits `ROLL`, `PITCH`,
+`YAW` as three independent signed floats, `parseLine` handles them with **zero parser changes**
+(each is a plain single-value key — the same coercion path as `DIST`, no `KNOWN_MULTI` entry
+needed since these aren't colon-joined multi-values). The frontend has a `Gy87Widget`
+(color-coded 3-channel Recharts chart + current-value readout). This is what the **sketch**
+needs to add.
+
+- **Keys**: `ROLL`, `PITCH`, `YAW` — three separate keys, each a single signed float in
+  degrees, e.g. `ROLL:12.3,PITCH:-4.5,YAW:89.0`. This exact shape was already covered by the
+  original parser test suite (the full-spec example line at the top of `parser.test.js`
+  includes `PITCH:-4.5`), so negative values are already verified to parse correctly — no
+  special handling needed for the negative sign, the coercion regex covers it.
+- **Append to the same line, same cadence** as everything else — one combined line per cycle:
+  ```
+  DIST:23.4,PIR:0,JOY:512:489,ROLL:12.3,PITCH:-4.5,YAW:89.0,TS:10234
+  ```
+- **Always include all three, unconditionally** — same reasoning as `JOY`/`PIR`: there's no
+  "invalid reading" state analogous to `DIST`'s out-of-range case here, so don't gate these
+  behind anything.
+- **The GY-87 needs more than a single `analogRead()`/`digitalRead()`** — it's an I2C combo
+  board (commonly MPU6050 accelerometer+gyroscope, plus HMC5883L magnetometer and a barometer),
+  not a simple analog/digital sensor like the previous three. Getting clean `ROLL`/`PITCH` needs
+  sensor fusion (a complementary or Kalman filter combining accelerometer + gyroscope, or the
+  MPU6050's onboard DMP if the library you pick exposes it) rather than a raw single reading —
+  and clean `YAW` (absolute heading, not just gyro-integrated drift) needs the magnetometer.
+  This spec deliberately doesn't prescribe a specific library (several common ones exist with
+  different APIs) — pick one, and the only protocol requirement is that whatever roll/pitch/yaw
+  values it produces get printed as plain signed floats in degrees, same as the mock.
+- **Wiring reference (non-prescriptive)**: I2C, not individual analog/digital pins — `SDA`/`SCL`
+  (on the Uno R4, either the dedicated `SDA`/`SCL` header pins near `AREF`, or `A4`/`A5` for
+  shield-compatible wiring, both work), plus `VCC`/`GND`. Multiple I2C devices share the same
+  two `SDA`/`SCL` lines and are addressed individually — no per-device pin wiring beyond that.
+- **Heads up for later (MPR121 addition)**: when the touch sensor (MPR121) gets added next,
+  it will likely share this same I2C bus (`SDA`/`SCL`). The GY-87's onboard chips and the
+  MPR121 need distinct I2C addresses to coexist — this is a hardware-level check (run an I2C
+  scanner sketch to confirm no address collision) that's the human's call, not something this
+  spec can verify in advance. Flagging it now since it'll matter once both are wired together,
+  not because it affects this addendum's scope.
+- Update the header comment's wiring section to add the I2C connections, same pattern as the
+  existing entries.
