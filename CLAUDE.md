@@ -98,11 +98,11 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   always re-run `ls /dev/cu.usbmodem*` or `GET /ports` rather than assuming this literal path).
 - **Node version used for real mode**: v24.18.0 (the pinned `.nvmrc` LTS) — `serialport` loaded
   and streamed cleanly, no native-build issues.
-- **Wiring used (current, post-Joystick-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3,
-  Echo→pin 4; PIR VCC→5V, GND→GND, OUT→pin 2; Joystick VCC→5V, GND→GND, VRx→A1, VRy→A0 (see
-  header comment in `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were originally
-  on A1/A2 during the Phase 1 DIST-only bring-up and were moved to digital pins 3/4 when PIR
-  was added.
+- **Wiring used (current, post-GY-87-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3,
+  Echo→pin 4; PIR VCC→5V, GND→GND, OUT→pin 2; Joystick VCC→5V, GND→GND, VRx→A0, VRy→A1;
+  GY-87 VCC→5V, GND→GND, SDA→SDA, SCL→SCL (see header comment in
+  `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were originally on A1/A2 during
+  the Phase 1 DIST-only bring-up and were moved to digital pins 3/4 when PIR was added.
 - **Sensor floor is ~2cm**: the sketch only emits `DIST:` when `2 < distance < 400`; readings
   at/below 2cm are dropped rather than emitted as noise — by design (also roughly the HC-SR04's
   physical minimum range), not a parsing or wiring bug.
@@ -119,9 +119,22 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   walk has no real "up"/"down" to get backwards). If a differently-wired joystick module is
   swapped in later and the dot moves opposite to the stick again, flip the sign back
   (`SIZE - (y / RANGE_MAX) * SIZE`) — see the comment at the top of `toCanvas()`.
-- Verified the full ladder three times — DIST-only (Phase 1), then again after PIR (Phase 2),
-  then again after Joystick (Phase 2): raw serial monitor showed correct frames → backend in
-  `SERIAL_SOURCE=real` mode parsed them (`/health` reported `connected:true`, source `real`) →
-  the browser widgets tracked the physical sensors live (Ultrasonic chart moved with a hand in
-  front of the HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a
-  hand wave; Joystick dot tracked the physical stick in both axes after the Y-axis fix above).
+- **GY-87 is MPU6050 (accel/gyro, addr `0x68`) + QMC5883L magnetometer (addr `0x0D`, not the
+  genuine HMC5883L most "GY-87" listings show — a common real-world substitute on cheap
+  modules), reached via the MPU6050's I2C bypass mode**: `ROLL`/`PITCH` come from a
+  complementary filter (gyro + accelerometer); `YAW` is a raw magnetometer heading with a fixed
+  calibration offset and is **only accurate when the board is level** — tilt compensation is
+  not yet implemented. Verified real-hardware: tilting the board moved `ROLL`/`PITCH` in the
+  expected direction (no axis-sign flip needed here, unlike the joystick) and the frontend
+  chart tracked live movement.
+- **If MPR121 (touch) is added later**, it will likely share this same I2C bus (`SDA`/`SCL`).
+  The GY-87's chips (`0x68`, `0x0D`) and the MPR121 need distinct addresses to coexist — run an
+  I2C scanner sketch to confirm no conflict before wiring both at once (not yet done, since
+  MPR121 isn't wired up yet).
+- Verified the full ladder four times — DIST-only (Phase 1), then again after PIR, Joystick,
+  and GY-87 (Phase 2): raw serial monitor showed correct frames → backend in `SERIAL_SOURCE=real`
+  mode parsed them (`/health` reported `connected:true`, source `real`) → the browser widgets
+  tracked the physical sensors live (Ultrasonic chart moved with a hand in front of the
+  HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a hand wave;
+  Joystick dot tracked the physical stick in both axes after the Y-axis fix; GY-87's 3-channel
+  chart tracked real tilting/rotation of the board).
