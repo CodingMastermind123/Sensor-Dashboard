@@ -8,6 +8,8 @@ const JOY_CENTER = 512; // 10-bit ADC midpoint, like a real analog joystick at r
 const JOY_MIN = 0;
 const JOY_MAX = 1023;
 const JOY_SPRING = 0.08; // pulls x/y back toward center each frame, like a spring-loaded stick
+const TILT_SPRING = 0.05; // pulls roll/pitch back toward level (0deg), like gravity settling
+const TILT_RANGE = 30; // clamp roll/pitch to +-30deg, a plausible handheld tilt range
 
 /**
  * Synthetic serial source: emits realistic protocol lines on an interval, no hardware
@@ -22,6 +24,9 @@ export function createMockSource({ frameMs = 50 } = {}) {
   let pirHoldUntil = 0;
   let joyX = JOY_CENTER;
   let joyY = JOY_CENTER;
+  let roll = 0;
+  let pitch = 0;
+  let yaw = 0; // free-drifting heading, wraps 0-360, no natural center
   const startedAt = Date.now();
 
   emitter.start = () => {
@@ -43,8 +48,14 @@ export function createMockSource({ frameMs = 50 } = {}) {
       joyX = Math.round(Math.min(JOY_MAX, Math.max(JOY_MIN, joyX)));
       joyY = Math.round(Math.min(JOY_MAX, Math.max(JOY_MIN, joyY)));
 
+      roll += (Math.random() - 0.5) * 2 - roll * TILT_SPRING;
+      pitch += (Math.random() - 0.5) * 2 - pitch * TILT_SPRING;
+      roll = Math.min(TILT_RANGE, Math.max(-TILT_RANGE, roll));
+      pitch = Math.min(TILT_RANGE, Math.max(-TILT_RANGE, pitch));
+      yaw = (yaw + (Math.random() - 0.5) * 3 + 360) % 360;
+
       const ts = now - startedAt;
-      const line = `DIST:${dist.toFixed(1)},PIR:${pir},JOY:${joyX}:${joyY},TS:${ts}`;
+      const line = `DIST:${dist.toFixed(1)},PIR:${pir},JOY:${joyX}:${joyY},ROLL:${roll.toFixed(1)},PITCH:${pitch.toFixed(1)},YAW:${yaw.toFixed(1)},TS:${ts}`;
       emitter.emit('line', line);
     }, frameMs);
   };

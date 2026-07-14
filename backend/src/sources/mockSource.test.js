@@ -74,4 +74,24 @@ describe('mockSource', () => {
       expect(parsed.data.JOY.y).toBeLessThanOrEqual(1023);
     }
   });
+
+  it('includes ROLL, PITCH, YAW as numbers on every line', async () => {
+    source = createMockSource({ frameMs: 5 });
+
+    const lines = await new Promise((resolve) => {
+      const collected = [];
+      source.on('line', (line) => {
+        collected.push(line);
+        if (collected.length >= 10) resolve(collected);
+      });
+      source.start();
+    });
+
+    for (const line of lines) {
+      const parsed = parseLine(line);
+      expect(parsed.data.ROLL).toBeTypeOf('number');
+      expect(parsed.data.PITCH).toBeTypeOf('number');
+      expect(parsed.data.YAW).toBeTypeOf('number');
+    }
+  });
 });
