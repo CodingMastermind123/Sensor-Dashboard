@@ -296,6 +296,9 @@ Order (matches request): confirm ultrasonic solid → **PIR → Joystick → MPR
 - **Sidebar/nav** to toggle widget visibility.
 - **CSV session logging + export**: backend writes each frame to `backend/sessions/<timestamp>.csv` when recording is on; frontend has start/stop recording + a download/export path. Header row = union of keys seen; document how new keys mid-session are handled (recommend: fixed header decided at start, or JSON-lines fallback).
 - **Color-coded accents per channel**; polish dark UI.
+- Detailed design + implementation plan for the four items above:
+  `docs/superpowers/specs/2026-07-15-phase2-infrastructure-design.md` and
+  `docs/superpowers/plans/2026-07-15-phase2-infrastructure.md`.
 
 **Do not start Phase 3 until every Phase 2 sensor widget works and the read pipeline is rock-solid.**
 
