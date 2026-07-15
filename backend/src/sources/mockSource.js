@@ -10,6 +10,7 @@ const JOY_MAX = 1023;
 const JOY_SPRING = 0.08; // pulls x/y back toward center each frame, like a spring-loaded stick
 const TILT_SPRING = 0.05; // pulls roll/pitch back toward level (0deg), like gravity settling
 const TILT_RANGE = 30; // clamp roll/pitch to +-30deg, a plausible handheld tilt range
+const YAW_DRIFT_PER_FRAME = 0.3; // deg/frame constant sweep rate, ~1 full rotation per ~72s @60ms
 
 /**
  * Synthetic serial source: emits realistic protocol lines on an interval, no hardware
@@ -26,7 +27,7 @@ export function createMockSource({ frameMs = 50 } = {}) {
   let joyY = JOY_CENTER;
   let roll = 0;
   let pitch = 0;
-  let yaw = 0; // free-drifting heading, wraps 0-360, no natural center
+  let yaw = 0; // slowly rotating heading, wraps 0-360, no natural center
   const startedAt = Date.now();
 
   emitter.start = () => {
@@ -52,7 +53,12 @@ export function createMockSource({ frameMs = 50 } = {}) {
       pitch += (Math.random() - 0.5) * 2 - pitch * TILT_SPRING;
       roll = Math.min(TILT_RANGE, Math.max(-TILT_RANGE, roll));
       pitch = Math.min(TILT_RANGE, Math.max(-TILT_RANGE, pitch));
-      yaw = (yaw + (Math.random() - 0.5) * 3 + 360) % 360;
+      // A zero-mean random walk lingers near any given angle for stretches at a time,
+      // including the 0/360 wrap point, which reads as a jittery train of spikes rather
+      // than a clean sweep. A small constant directional drift (plus a little noise) keeps
+      // yaw consistently rotating one way, so it only crosses the boundary as a single
+      // real wrap every rotation, like an actual slowly-turning heading.
+      yaw = (yaw + YAW_DRIFT_PER_FRAME + (Math.random() - 0.5) * 0.2 + 360) % 360;
 
       const ts = now - startedAt;
       const line = `DIST:${dist.toFixed(1)},PIR:${pir},JOY:${joyX}:${joyY},ROLL:${roll.toFixed(1)},PITCH:${pitch.toFixed(1)},YAW:${yaw.toFixed(1)},TS:${ts}`;

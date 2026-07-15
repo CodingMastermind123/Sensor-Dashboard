@@ -3,11 +3,13 @@ import WidgetCard from '../components/WidgetCard.jsx'
 
 const ACCENT = '#34d399'
 const COLORS = { roll: '#f472b6', pitch: '#60a5fa', yaw: '#facc15' }
+const TILT_DOMAIN = [-45, 45]
 
 /**
- * Roll/pitch/yaw share one chart on a common (auto-scaled) axis. Yaw's full 0-360deg
- * heading range will typically dwarf roll/pitch's +-30deg tilt range visually — a known
- * tradeoff for keeping this a single combined 3-channel graph rather than dual axes.
+ * Roll/pitch/yaw share one chart but not one Y-axis: yaw's full 0-360deg heading range
+ * would otherwise dwarf roll/pitch's +-30deg tilt range and flatten them to a line near
+ * the bottom. Yaw gets its own fixed 0-360 axis (right); roll/pitch share a tighter
+ * +-45deg axis (left) since they're on comparable scales to each other.
  */
 function Gy87Widget({ latestByKey, historyByKey }) {
   const rollHist = historyByKey.ROLL ?? []
@@ -39,15 +41,27 @@ function Gy87Widget({ latestByKey, historyByKey }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <XAxis dataKey="t" hide />
-            <YAxis width={36} tick={{ fontSize: 10, fill: '#737373' }} />
+            <YAxis
+              yAxisId="tilt"
+              domain={TILT_DOMAIN}
+              width={36}
+              tick={{ fontSize: 10, fill: COLORS.roll }}
+            />
+            <YAxis
+              yAxisId="yaw"
+              orientation="right"
+              domain={[0, 360]}
+              width={36}
+              tick={{ fontSize: 10, fill: COLORS.yaw }}
+            />
             <Tooltip
               contentStyle={{ background: '#171717', border: '1px solid #404040', fontSize: 12 }}
               labelFormatter={() => ''}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="roll" name="Roll" stroke={COLORS.roll} dot={false} isAnimationActive={false} strokeWidth={2} />
-            <Line type="monotone" dataKey="pitch" name="Pitch" stroke={COLORS.pitch} dot={false} isAnimationActive={false} strokeWidth={2} />
-            <Line type="monotone" dataKey="yaw" name="Yaw" stroke={COLORS.yaw} dot={false} isAnimationActive={false} strokeWidth={2} />
+            <Line yAxisId="tilt" type="monotone" dataKey="roll" name="Roll" stroke={COLORS.roll} dot={false} isAnimationActive={false} strokeWidth={2} />
+            <Line yAxisId="tilt" type="monotone" dataKey="pitch" name="Pitch" stroke={COLORS.pitch} dot={false} isAnimationActive={false} strokeWidth={2} />
+            <Line yAxisId="yaw" type="monotone" dataKey="yaw" name="Yaw" stroke={COLORS.yaw} dot={false} isAnimationActive={false} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>
