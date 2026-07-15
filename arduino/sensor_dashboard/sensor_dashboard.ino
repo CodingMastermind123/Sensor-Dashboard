@@ -1,27 +1,29 @@
 /*
- * Sensor Dashboard - Phase 2 (Ultrasonic + PIR + Joystick + IMU roll/pitch + Yaw)
+ * Sensor Dashboard - Phase 2 Complete (all 5 sensors)
  * Board: Arduino Uno R4 (Renesas core - arduino:renesas_uno)
- * Sensors: HC-SR04, PIR (HC-SR501 style), Joystick module, GY-87 (MPU6050 + QMC5883L)
+ * Sensors: HC-SR04, PIR (HC-SR501 style), Joystick module,
+ *          GY-87 (MPU6050 + QMC5883L), MPR121 (capacitive touch)
  *
  * Wiring:
- *   HC-SR04   VCC->5V  GND->GND  Trig->3   Echo->4
- *   PIR       VCC->5V  GND->GND  OUT->2
- *   Joystick  VCC->5V  GND->GND  VRx->A0   VRy->A1
- *   GY-87     VCC->5V  GND->GND  SDA->SDA  SCL->SCL
+ *   HC-SR04   VCC->5V   GND->GND  Trig->3   Echo->4
+ *   PIR       VCC->5V   GND->GND  OUT->2
+ *   Joystick  VCC->5V   GND->GND  VRx->A0   VRy->A1
+ *   GY-87     VCC->5V   GND->GND  SDA->SDA  SCL->SCL
  *             MPU6050 (accel/gyro) at 0x68
  *             QMC5883L (magnetometer, NOT genuine HMC5883L) at 0x0D,
  *               reachable only after enabling MPU6050 bypass mode
+ *   MPR121    VCC->3.3V (NOT 5V) GND->GND  SDA->SDA  SCL->SCL
+ *             ADD unconnected -> default address 0x5A
+ *             IRQ unconnected -> polling instead of interrupt-driven reads
  *
  * Serial: 115200 baud
  * Output format (one line per cycle):
  *   DIST:<float cm>,PIR:<0/1>,JOY:<x>:<y>,ROLL:<float deg>,PITCH:<float deg>,
- *   YAW:<float deg>,TS:<millis>
+ *   YAW:<float deg>,TOUCH:<12-bit string>,TS:<millis>
  *   (DIST omitted on cycles where the ultrasonic reading is out of range)
  *
- * IMPORTANT: YAW is currently raw magnetometer heading, calibrated with a
- * fixed offset, but NOT tilt-compensated. It is only accurate when the
- * board is level. Tilt compensation (using ROLL/PITCH to correct the
- * magnetometer reading at non-flat orientations) is not yet implemented.
+ * IMPORTANT: YAW is raw magnetometer heading, calibrated with a fixed
+ * offset, but NOT tilt-compensated. Only accurate when the board is level.
  */
 
 #include <Wire.h>
@@ -50,6 +52,16 @@ const float ALPHA = 0.98;
 // --- Magnetometer (QMC5883L, via MPU6050 bypass) ---
 const int QMC_ADDR = 0x0D;
 const float HEADING_OFFSET = 193.0; // calibrated against magnetic north
+
+// --- MPR121 (capacitive touch) ---
+const int MPR_ADDR = 0x5A;
+
+void mprWriteRegister(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(MPR_ADDR);
+  Wire.write(reg);
+  Wire.write(value);
+  Wire.endTransmission();
+}
 
 void setup() {
   pinMode(echoPin, INPUT);
@@ -87,6 +99,16 @@ void setup() {
   Wire.write(0x09); // Control register 1
   Wire.write(0x1D); // continuous mode, 200Hz, 8-gauss, 512 oversampling
   Wire.endTransmission();
+
+  // --- Init MPR121 ---
+  mprWriteRegister(0x5E, 0x00); // ECR register, stop mode (required before config writes)
+
+  for (uint8_t i = 0; i < 12; i++) {
+    mprWriteRegister(0x41 + i * 2, 12); // touch threshold
+    mprWriteRegister(0x42 + i * 2, 6);  // release threshold
+  }
+
+  mprWriteRegister(0x5E, 0x0C); // enable all 12 electrodes, enter run mode
 
   lastIMUTime = millis();
 }
@@ -178,6 +200,21 @@ void loop() {
 
     line += ",YAW:";
     line += heading;
+
+    // --- MPR121: read 12-channel touch status ---
+    Wire.beginTransmission(MPR_ADDR);
+    Wire.write(0x00); // touch status register (low byte)
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPR_ADDR, 2, true);
+
+    uint8_t touchLow = Wire.read();
+    uint8_t touchHigh = Wire.read();
+    uint16_t touched = (touchHigh << 8) | touchLow;
+
+    line += ",TOUCH:";
+    for (int i = 0; i < 12; i++) {
+      line += ((touched >> i) & 1) ? "1" : "0";
+    }
 
     line += ",TS:";
     line += currentTime;
