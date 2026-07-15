@@ -227,3 +227,38 @@ needs to add.
   not because it affects this addendum's scope.
 - Update the header comment's wiring section to add the I2C connections, same pattern as the
   existing entries.
+
+## 11. Phase 2 addendum: MPR121 (TOUCH)
+
+Backend/frontend support is already built and committed — mock source emits `TOUCH` as a
+12-char `0`/`1` bitfield string with sporadic per-pad trigger + hold behavior, `parseLine`
+already keeps it as a string via `STRING_KEYS` (no parser change needed — this was in place
+since Phase 1, in anticipation of exactly this sensor), and the frontend has an `Mpr121Widget`
+(12-cell grid, one cell per bit index). This is what the **sketch** needs to add.
+
+- **Key**: `TOUCH`, a single value that must stay a **12-character string of `0`s and `1`s**,
+  e.g. `TOUCH:001010100100` — **never** print it as a bare integer (`Serial.print(touchedBits)`
+  on a raw 12-bit value would drop leading zeros and roundtrip as a plain number, corrupting
+  which pads read as touched). Build it character-by-character, e.g. looping bit-by-bit and
+  appending `'1'`/`'0'` to the line — the same pattern already used for e.g. `TOUCH:` isn't
+  built via `Serial.print(int)`.
+- **Bit-to-pad mapping is a placeholder, not verified**: the mock and `Mpr121Widget` both
+  assume bit index 0 (leftmost character) = electrode/pad 0, in ascending order. This is a
+  reasonable default but **has not been confirmed against real MPR121 hardware** — the actual
+  electrode-to-register-bit mapping depends on the specific breakout board and how you read the
+  touch-status register. Once wired up, verify pad-by-pad (touch electrode 0, confirm the
+  frontend highlights cell 0, etc.) and flag if the mapping needs to be reversed or reordered.
+- **Append to the same line, same cadence, unconditionally** — same as `JOY`/`PIR`/`ROLL`/etc.:
+  ```
+  DIST:23.4,PIR:0,JOY:512:489,ROLL:12.3,PITCH:-4.5,YAW:89.0,TOUCH:001010100100,TS:10234
+  ```
+- **Wiring reference (non-prescriptive)**: I2C, like the GY-87 — `SDA`/`SCL` shared with any
+  other I2C devices already on the bus, plus `VCC`/`GND`. **Check your specific MPR121
+  breakout's voltage requirement before wiring** — some common breakouts are 3.3V-only despite
+  sharing a 5V-tolerant bus with other sensors; feeding 5V into a 3.3V-only board can damage it.
+  The MPR121's default I2C address is configurable via its `ADDR` pin (tied to different
+  reference pins selects different addresses) — if you're also running the GY-87 on the same
+  bus, this is exactly the address-conflict check flagged in §10: confirm via an I2C scanner
+  that the MPR121's address doesn't collide with `0x68`/`0x0D`.
+- Update the header comment's wiring section to add the MPR121's I2C connection and chosen
+  address, same pattern as the existing entries.
