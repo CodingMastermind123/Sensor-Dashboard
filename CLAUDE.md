@@ -12,11 +12,12 @@ backend/     Express + ws + serialport bridge. ESM ("type": "module"). Node LTS 
   src/parser.js       pure protocol parser (serial line -> object), unit-tested
   src/sources/        serial source abstraction: mockSource.js (default) / serialSource.js (lazy)
   src/server.js       Express + WebSocket broadcast
+  src/recorder.js     CSV session recorder (fixed columns, sync file I/O)
   sessions/           gitignored CSV session logs (Phase 2+)
 frontend/    React + Vite + Tailwind + Recharts. JavaScript (JSX), not TypeScript.
-  src/hooks/useSensorSocket.js   WS client hook: connect, reconnect, bounded history
+  src/hooks/useSensorSocket.js   WS client hook: connect, reconnect, bounded history, pause
   src/widgets/                   registry.js + one widget component per sensor
-  src/components/                shared UI (ConnectionBar, WidgetCard, Dashboard)
+  src/components/                shared UI (ConnectionBar, Sidebar, WidgetCard, Dashboard)
 ```
 
 ## Runtime
@@ -62,13 +63,30 @@ Sensor frame (server → client):
 
 Status (server → client, on connect + periodically):
 ```json
-{ "type": "status", "connected": true, "port": "mock", "dataRateHz": 20 }
+{ "type": "status", "connected": true, "port": "mock", "dataRateHz": 20, "recording": false, "sessionFile": null }
 ```
 
 Command (client → server, Phase 3+):
 ```json
 { "type": "command", "cmd": "SERVO", "args": ["90"] }
 ```
+
+## CSV session recording (Phase 2)
+
+- `POST /recording/start` → `{ ok, file }` (409 if already recording)
+- `POST /recording/stop` → `{ ok, file, rows }` (409 if not recording)
+- `GET /sessions` → `[{ file, size, mtime }]`
+- `GET /sessions/:file` → downloads the CSV
+- Files land in `backend/sessions/<timestamp>.csv` (gitignored). Columns are a fixed
+  list (`ts, recvTs, DIST, PIR, ROLL, PITCH, YAW, JOY_x, JOY_y, TOUCH`) declared in
+  `backend/src/recorder.js` — a key not in that list is dropped from CSV rows (still
+  visible live in the UI). `ts` is the Arduino's `millis()` and resets to ~0 on any
+  board reset mid-recording; `recvTs` (server receive time) never resets — use it for
+  real elapsed time across a session that spans a reboot.
+- A source disconnect (Arduino unplugged, source swapped) while a recording is active
+  just produces a gap in rows — `recorder.write()` is only ever called from the
+  `'line'` handler, so no lines simply means no rows, not a crash or a distinct
+  "disconnected" code path.
 
 ## Working principles (binding for this project)
 
