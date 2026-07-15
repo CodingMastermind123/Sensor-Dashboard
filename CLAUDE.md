@@ -98,11 +98,13 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   always re-run `ls /dev/cu.usbmodem*` or `GET /ports` rather than assuming this literal path).
 - **Node version used for real mode**: v24.18.0 (the pinned `.nvmrc` LTS) — `serialport` loaded
   and streamed cleanly, no native-build issues.
-- **Wiring used (current, post-GY-87-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3,
+- **Wiring used (current, post-MPR121-addition)**: HC-SR04 VCC→5V, GND→GND, Trig→pin 3,
   Echo→pin 4; PIR VCC→5V, GND→GND, OUT→pin 2; Joystick VCC→5V, GND→GND, VRx→A0, VRy→A1;
-  GY-87 VCC→5V, GND→GND, SDA→SDA, SCL→SCL (see header comment in
-  `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were originally on A1/A2 during
-  the Phase 1 DIST-only bring-up and were moved to digital pins 3/4 when PIR was added.
+  GY-87 VCC→5V, GND→GND, SDA→SDA, SCL→SCL; MPR121 VCC→**3.3V (not 5V)**, GND→GND, SDA→SDA,
+  SCL→SCL, ADDR unconnected (address `0x5A`), IRQ unconnected (polling, not interrupt-driven)
+  (see header comment in `arduino/sensor_dashboard/sensor_dashboard.ino`). Trig/Echo were
+  originally on A1/A2 during the Phase 1 DIST-only bring-up and were moved to digital pins 3/4
+  when PIR was added.
 - **Sensor floor is ~2cm**: the sketch only emits `DIST:` when `2 < distance < 400`; readings
   at/below 2cm are dropped rather than emitted as noise — by design (also roughly the HC-SR04's
   physical minimum range), not a parsing or wiring bug.
@@ -127,14 +129,25 @@ Verified end-to-end (Phase 1 Session 2, Steps 1.12–1.14) with a physical Uno R
   not yet implemented. Verified real-hardware: tilting the board moved `ROLL`/`PITCH` in the
   expected direction (no axis-sign flip needed here, unlike the joystick) and the frontend
   chart tracked live movement.
-- **If MPR121 (touch) is added later**, it will likely share this same I2C bus (`SDA`/`SCL`).
-  The GY-87's chips (`0x68`, `0x0D`) and the MPR121 need distinct addresses to coexist — run an
-  I2C scanner sketch to confirm no conflict before wiring both at once (not yet done, since
-  MPR121 isn't wired up yet).
-- Verified the full ladder four times — DIST-only (Phase 1), then again after PIR, Joystick,
-  and GY-87 (Phase 2): raw serial monitor showed correct frames → backend in `SERIAL_SOURCE=real`
-  mode parsed them (`/health` reported `connected:true`, source `real`) → the browser widgets
-  tracked the physical sensors live (Ultrasonic chart moved with a hand in front of the
-  HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a hand wave;
-  Joystick dot tracked the physical stick in both axes after the Y-axis fix; GY-87's 3-channel
-  chart tracked real tilting/rotation of the board).
+- **MPR121 (touch) shares the I2C bus with the GY-87**: no address conflict seen (`0x68`/`0x0D`
+  vs. `0x5A`) — confirmed by flashing directly and checking `ROLL`/`PITCH`/`YAW` stayed sane
+  rather than running a separate I2C scanner sketch first. `TOUCH`'s bit-to-pad mapping (bit 0
+  = leftmost character = pad 0, ascending) was verified against real hardware: touching the
+  pad wired to electrode 0 flipped bit position 0 as expected, confirming the mock/widget's
+  assumed convention was correct with no remapping needed.
+- **Chart Y-axis domains needed `allowDataOverflow` to actually stay fixed**: Recharts silently
+  expands a `domain={[min,max]}` array back to auto-scale behavior when data exceeds it, unless
+  `allowDataOverflow` is also set on the `<YAxis>`. This was invisible in mock mode (the mock's
+  roll/pitch clamp to ±30°, well inside the widget's ±45° axis) but surfaced immediately once
+  real hardware pushed `ROLL` to ~150° during MPR121 bring-up — the axis re-expanded and
+  flattened `PITCH` right back to a line, exactly the bug the fixed domain was meant to prevent.
+  Fixed in both `UltrasonicWidget` and `Gy87Widget`; keep this in mind for any future fixed-range
+  chart (the prop is required, not just the domain array).
+- Verified the full ladder five times — DIST-only (Phase 1), then again after PIR, Joystick,
+  GY-87, and MPR121 (Phase 2): raw serial monitor showed correct frames → backend in
+  `SERIAL_SOURCE=real` mode parsed them (`/health` reported `connected:true`, source `real`) →
+  the browser widgets tracked the physical sensors live (Ultrasonic chart moved with a hand in
+  front of the HC-SR04; PIR widget flipped to "Motion detected" and logged the event with a
+  hand wave; Joystick dot tracked the physical stick in both axes after the Y-axis fix; GY-87's
+  3-channel chart tracked real tilting/rotation of the board; MPR121's 12-pad grid lit up the
+  correct cell for each pad touched).
