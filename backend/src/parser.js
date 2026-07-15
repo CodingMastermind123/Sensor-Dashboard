@@ -1,8 +1,11 @@
 // Known multi-value keys get a named shape instead of a plain array.
-const KNOWN_MULTI = { JOY: ['x', 'y'] };
+// Exported so recorder.js can derive its CSV flattening (JOY -> JOY_x, JOY_y) from the
+// same source instead of hardcoding the sub-key names a second time.
+export const KNOWN_MULTI = { JOY: ['x', 'y'] };
 
 // Keys that must never be coerced to a number (leading zeros / bit width matter).
-const STRING_KEYS = new Set(['TOUCH']);
+// Exported so recorder.js knows to write these as-is rather than assuming a numeric cell.
+export const STRING_KEYS = new Set(['TOUCH']);
 
 function coerce(str) {
   if (/^-?\d+$/.test(str)) return parseInt(str, 10);

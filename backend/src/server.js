@@ -1,9 +1,12 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import { createSource, listPorts } from './sources/index.js';
 import { parseLine } from './parser.js';
+import { createRecorder, FILENAME_RE } from './recorder.js';
 
 /**
  * Builds (but does not start listening on) the HTTP+WS server wired to a serial source.
@@ -15,6 +18,7 @@ export function createServer(config) {
   app.use(cors());
 
   const source = createSource(config);
+  const recorder = createRecorder({ sessionsDir: config.SESSIONS_DIR });
   let connected = false;
   let sourcePort = config.SERIAL_SOURCE === 'real' ? config.SERIAL_PATH : 'mock';
   let frameCount = 0;
@@ -30,11 +34,58 @@ export function createServer(config) {
     res.json(result);
   });
 
+  app.post('/recording/start', (req, res) => {
+    try {
+      const { file } = recorder.start();
+      broadcast(currentStatus());
+      res.json({ ok: true, file });
+    } catch (err) {
+      res.status(409).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.post('/recording/stop', (req, res) => {
+    try {
+      const { file, rows } = recorder.stop();
+      broadcast(currentStatus());
+      res.json({ ok: true, file, rows });
+    } catch (err) {
+      res.status(409).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.get('/sessions', (req, res) => {
+    if (!fs.existsSync(config.SESSIONS_DIR)) return res.json([]);
+    const files = fs
+      .readdirSync(config.SESSIONS_DIR)
+      .filter((name) => FILENAME_RE.test(name))
+      .map((name) => {
+        const stat = fs.statSync(path.join(config.SESSIONS_DIR, name));
+        return { file: name, size: stat.size, mtime: stat.mtime.toISOString() };
+      })
+      .sort((a, b) => b.mtime.localeCompare(a.mtime));
+    res.json(files);
+  });
+
+  app.get('/sessions/:file', (req, res) => {
+    if (!FILENAME_RE.test(req.params.file)) return res.status(400).json({ error: 'invalid filename' });
+    const filePath = path.join(config.SESSIONS_DIR, req.params.file);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
+    res.download(filePath);
+  });
+
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server });
 
   function currentStatus() {
-    return { type: 'status', connected, port: sourcePort, dataRateHz };
+    return {
+      type: 'status',
+      connected,
+      port: sourcePort,
+      dataRateHz,
+      recording: recorder.isRecording(),
+      sessionFile: recorder.currentFile(),
+    };
   }
 
   function broadcast(envelope) {
@@ -54,6 +105,7 @@ export function createServer(config) {
     const parsed = parseLine(line);
     if (!parsed) return;
     frameCount += 1;
+    recorder.write(parsed);
     broadcast({
       type: 'sensors',
       ts: parsed.ts,
@@ -91,6 +143,7 @@ export function createServer(config) {
   function close() {
     return new Promise((resolve, reject) => {
       clearInterval(rateTimer);
+      if (recorder.isRecording()) recorder.stop();
       source.close();
       wss.close(() => {
         server.close((err) => (err ? reject(err) : resolve()));
