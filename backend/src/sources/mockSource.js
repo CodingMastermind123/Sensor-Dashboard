@@ -11,6 +11,9 @@ const JOY_SPRING = 0.08; // pulls x/y back toward center each frame, like a spri
 const TILT_SPRING = 0.05; // pulls roll/pitch back toward level (0deg), like gravity settling
 const TILT_RANGE = 30; // clamp roll/pitch to +-30deg, a plausible handheld tilt range
 const YAW_DRIFT_PER_FRAME = 0.3; // deg/frame constant sweep rate, ~1 full rotation per ~72s @60ms
+const TOUCH_PAD_COUNT = 12;
+const TOUCH_TRIGGER_CHANCE = 0.01; // per-pad, per-frame chance of a touch starting
+const TOUCH_HOLD_MS = 800; // roughly how long a finger might rest on a pad
 
 /**
  * Synthetic serial source: emits realistic protocol lines on an interval, no hardware
@@ -28,6 +31,8 @@ export function createMockSource({ frameMs = 50 } = {}) {
   let roll = 0;
   let pitch = 0;
   let yaw = 0; // slowly rotating heading, wraps 0-360, no natural center
+  const touchState = new Array(TOUCH_PAD_COUNT).fill(0);
+  const touchHoldUntil = new Array(TOUCH_PAD_COUNT).fill(0);
   const startedAt = Date.now();
 
   emitter.start = () => {
@@ -60,8 +65,18 @@ export function createMockSource({ frameMs = 50 } = {}) {
       // real wrap every rotation, like an actual slowly-turning heading.
       yaw = (yaw + YAW_DRIFT_PER_FRAME + (Math.random() - 0.5) * 0.2 + 360) % 360;
 
+      for (let i = 0; i < TOUCH_PAD_COUNT; i++) {
+        if (touchState[i] === 1 && now >= touchHoldUntil[i]) {
+          touchState[i] = 0;
+        } else if (touchState[i] === 0 && Math.random() < TOUCH_TRIGGER_CHANCE) {
+          touchState[i] = 1;
+          touchHoldUntil[i] = now + TOUCH_HOLD_MS;
+        }
+      }
+      const touch = touchState.join('');
+
       const ts = now - startedAt;
-      const line = `DIST:${dist.toFixed(1)},PIR:${pir},JOY:${joyX}:${joyY},ROLL:${roll.toFixed(1)},PITCH:${pitch.toFixed(1)},YAW:${yaw.toFixed(1)},TS:${ts}`;
+      const line = `DIST:${dist.toFixed(1)},PIR:${pir},JOY:${joyX}:${joyY},ROLL:${roll.toFixed(1)},PITCH:${pitch.toFixed(1)},YAW:${yaw.toFixed(1)},TOUCH:${touch},TS:${ts}`;
       emitter.emit('line', line);
     }, frameMs);
   };

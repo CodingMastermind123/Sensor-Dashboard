@@ -94,4 +94,23 @@ describe('mockSource', () => {
       expect(parsed.data.YAW).toBeTypeOf('number');
     }
   });
+
+  it('includes a TOUCH key as a 12-char 0/1 bitfield string on every line', async () => {
+    source = createMockSource({ frameMs: 5 });
+
+    const lines = await new Promise((resolve) => {
+      const collected = [];
+      source.on('line', (line) => {
+        collected.push(line);
+        if (collected.length >= 10) resolve(collected);
+      });
+      source.start();
+    });
+
+    for (const line of lines) {
+      const parsed = parseLine(line);
+      expect(parsed.data.TOUCH).toBeTypeOf('string');
+      expect(parsed.data.TOUCH).toMatch(/^[01]{12}$/);
+    }
+  });
 });

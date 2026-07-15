@@ -2,6 +2,7 @@ import UltrasonicWidget from './UltrasonicWidget.jsx'
 import PirWidget from './PirWidget.jsx'
 import JoystickWidget from './JoystickWidget.jsx'
 import Gy87Widget from './Gy87Widget.jsx'
+import Mpr121Widget from './Mpr121Widget.jsx'
 
 /**
  * Maps a widget id to its component + metadata. Adding a sensor widget later is a
@@ -35,5 +36,12 @@ export const registry = [
     accentColor: '#34d399',
     visible: true,
     Component: Gy87Widget,
+  },
+  {
+    id: 'mpr121',
+    title: 'MPR121 Touch',
+    accentColor: '#2dd4bf',
+    visible: true,
+    Component: Mpr121Widget,
   },
 ]
