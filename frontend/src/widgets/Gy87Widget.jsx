@@ -44,6 +44,7 @@ function Gy87Widget({ latestByKey, historyByKey }) {
             <YAxis
               yAxisId="tilt"
               domain={TILT_DOMAIN}
+              allowDataOverflow
               width={36}
               tick={{ fontSize: 10, fill: COLORS.roll }}
             />
@@ -51,6 +52,7 @@ function Gy87Widget({ latestByKey, historyByKey }) {
               yAxisId="yaw"
               orientation="right"
               domain={[0, 360]}
+              allowDataOverflow
               width={36}
               tick={{ fontSize: 10, fill: COLORS.yaw }}
             />

@@ -7,6 +7,8 @@ const STALE_MS = 2000
 // Fixed (not auto-scaled) chart range in cm. Auto-scaling to the full buffer let a single
 // startup-settling outlier (e.g. an early ~375cm reading) blow out the axis and flatten every
 // normal desk-range reading to the bottom. Adjust if the sensor is used at longer range.
+// Recharts silently expands past an explicit domain array unless allowDataOverflow is also
+// set on the <YAxis> — without it, an outlier still blows out the axis exactly as before.
 const Y_DOMAIN = [0, 150]
 
 function UltrasonicWidget({ latestByKey, historyByKey }) {
@@ -40,7 +42,7 @@ function UltrasonicWidget({ latestByKey, historyByKey }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={history}>
             <XAxis dataKey="t" hide />
-            <YAxis domain={Y_DOMAIN} width={32} tick={{ fontSize: 10, fill: '#737373' }} />
+            <YAxis domain={Y_DOMAIN} allowDataOverflow width={32} tick={{ fontSize: 10, fill: '#737373' }} />
             <Tooltip
               contentStyle={{ background: '#171717', border: '1px solid #404040', fontSize: 12 }}
               labelFormatter={() => ''}
