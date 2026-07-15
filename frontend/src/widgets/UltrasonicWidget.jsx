@@ -11,7 +11,7 @@ const STALE_MS = 2000
 // set on the <YAxis> — without it, an outlier still blows out the axis exactly as before.
 const Y_DOMAIN = [0, 150]
 
-function UltrasonicWidget({ latestByKey, historyByKey }) {
+function UltrasonicWidget({ latestByKey, historyByKey, expanded, onToggleExpand, onHide, onClear }) {
   // Re-renders periodically so staleness reflects frames that *stopped* arriving,
   // not just the last frame that did.
   const [, forceTick] = useState(0)
@@ -30,7 +30,14 @@ function UltrasonicWidget({ latestByKey, historyByKey }) {
   const max = values.length ? Math.max(...values) : null
 
   return (
-    <WidgetCard title="Ultrasonic (DIST)" accentColor={ACCENT}>
+    <WidgetCard
+      title="Ultrasonic (DIST)"
+      accentColor={ACCENT}
+      expanded={expanded}
+      onToggleExpand={onToggleExpand}
+      onHide={onHide}
+      onClear={onClear}
+    >
       <div className="mb-2 flex items-baseline gap-2">
         <span className={`text-4xl font-bold tabular-nums ${stale ? 'text-neutral-600' : 'text-neutral-50'}`}>
           {current != null ? Number(current).toFixed(1) : '—'}

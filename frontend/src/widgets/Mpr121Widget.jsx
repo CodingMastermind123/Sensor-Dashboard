@@ -8,12 +8,18 @@ const PAD_COUNT = 12
  * TOUCH bitfield) — this mapping is a placeholder assumption; verify actual electrode
  * numbering against real hardware once the MPR121 is wired up.
  */
-function Mpr121Widget({ latestByKey }) {
+function Mpr121Widget({ latestByKey, expanded, onToggleExpand, onHide }) {
   const touch = latestByKey.TOUCH ?? '0'.repeat(PAD_COUNT)
   const pads = touch.split('').map((c) => c === '1')
 
   return (
-    <WidgetCard title="MPR121 Touch" accentColor={ACCENT}>
+    <WidgetCard
+      title="MPR121 Touch"
+      accentColor={ACCENT}
+      expanded={expanded}
+      onToggleExpand={onToggleExpand}
+      onHide={onHide}
+    >
       <div className="grid grid-cols-4 gap-2">
         {pads.map((active, i) => (
           <div

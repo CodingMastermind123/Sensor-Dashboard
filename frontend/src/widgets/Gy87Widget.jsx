@@ -11,7 +11,7 @@ const TILT_DOMAIN = [-45, 45]
  * the bottom. Yaw gets its own fixed 0-360 axis (right); roll/pitch share a tighter
  * +-45deg axis (left) since they're on comparable scales to each other.
  */
-function Gy87Widget({ latestByKey, historyByKey }) {
+function Gy87Widget({ latestByKey, historyByKey, expanded, onToggleExpand, onHide, onClear }) {
   const rollHist = historyByKey.ROLL ?? []
   const pitchHist = historyByKey.PITCH ?? []
   const yawHist = historyByKey.YAW ?? []
@@ -30,7 +30,14 @@ function Gy87Widget({ latestByKey, historyByKey }) {
   const yaw = latestByKey.YAW
 
   return (
-    <WidgetCard title="GY-87 (Roll/Pitch/Yaw)" accentColor={ACCENT}>
+    <WidgetCard
+      title="GY-87 (Roll/Pitch/Yaw)"
+      accentColor={ACCENT}
+      expanded={expanded}
+      onToggleExpand={onToggleExpand}
+      onHide={onHide}
+      onClear={onClear}
+    >
       <div className="mb-2 flex gap-4 text-sm">
         <span style={{ color: COLORS.roll }}>roll: {roll != null ? roll.toFixed(1) : '—'}°</span>
         <span style={{ color: COLORS.pitch }}>pitch: {pitch != null ? pitch.toFixed(1) : '—'}°</span>

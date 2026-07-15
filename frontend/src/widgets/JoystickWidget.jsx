@@ -14,7 +14,7 @@ const TRAIL_MAX_ALPHA = 0.5
  * Draws via requestAnimationFrame so motion stays smooth independent of React's render
  * cadence — the rAF loop reads the latest target from a ref rather than re-rendering.
  */
-function JoystickWidget({ latestByKey }) {
+function JoystickWidget({ latestByKey, resetToken, expanded, onToggleExpand, onHide, onClear }) {
   const canvasRef = useRef(null)
   const targetRef = useRef({ x: RANGE_MAX / 2, y: RANGE_MAX / 2 })
   const posRef = useRef({ x: RANGE_MAX / 2, y: RANGE_MAX / 2 })
@@ -29,6 +29,12 @@ function JoystickWidget({ latestByKey }) {
       trailRef.current = [...trailRef.current, joy].slice(-TRAIL_LENGTH)
     }
   }, [latestByKey.JOY])
+
+  // JOY's {x,y} shape lives in a local ref, not historyByKey — clearHistory() alone
+  // can't reach it, so react to resetToken directly to wipe the trail on "clear".
+  useEffect(() => {
+    trailRef.current = []
+  }, [resetToken])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -86,7 +92,14 @@ function JoystickWidget({ latestByKey }) {
 
   const joy = latestByKey.JOY
   return (
-    <WidgetCard title="Joystick (JOY)" accentColor={ACCENT}>
+    <WidgetCard
+      title="Joystick (JOY)"
+      accentColor={ACCENT}
+      expanded={expanded}
+      onToggleExpand={onToggleExpand}
+      onHide={onHide}
+      onClear={onClear}
+    >
       <canvas
         ref={canvasRef}
         width={SIZE}

@@ -11,11 +11,17 @@ const RECONNECT_MAX_MS = 5000
  * Connects to the backend WebSocket, auto-reconnecting with backoff, and exposes live
  * sensor state plus a bounded per-key history for charts (ring buffer, capped at
  * HISTORY_CAP points — never an unbounded array).
+ *
+ * `paused`: while true, incoming sensor frames are still received (connection/rate
+ * stats keep updating) but are not applied to latestByKey/historyByKey/lastFrame, so
+ * the UI visibly freezes without the socket itself pausing or dropping data server-side.
  */
-export function useSensorSocket() {
+export function useSensorSocket(paused = false) {
   const [connected, setConnected] = useState(false)
   const [port, setPort] = useState(null)
   const [dataRateHz, setDataRateHz] = useState(0)
+  const [recording, setRecording] = useState(false)
+  const [sessionFile, setSessionFile] = useState(null)
   const [lastFrame, setLastFrame] = useState(null)
   const [latestByKey, setLatestByKey] = useState({})
   const [historyByKey, setHistoryByKey] = useState({})
@@ -24,10 +30,23 @@ export function useSensorSocket() {
   const reconnectDelayRef = useRef(RECONNECT_MIN_MS)
   const reconnectTimerRef = useRef(null)
   const mountedRef = useRef(true)
+  const pausedRef = useRef(paused)
+
+  useEffect(() => {
+    pausedRef.current = paused
+  }, [paused])
 
   const send = useCallback((obj) => {
     const ws = wsRef.current
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj))
+  }, [])
+
+  const clearHistory = useCallback((keys) => {
+    setHistoryByKey((prev) => {
+      const next = { ...prev }
+      for (const key of keys) delete next[key]
+      return next
+    })
   }, [])
 
   useEffect(() => {
@@ -64,7 +83,10 @@ export function useSensorSocket() {
           setConnected(msg.connected)
           setPort(msg.port)
           setDataRateHz(msg.dataRateHz ?? 0)
+          setRecording(msg.recording ?? false)
+          setSessionFile(msg.sessionFile ?? null)
         } else if (msg.type === 'sensors') {
+          if (pausedRef.current) return
           setLastFrame(msg)
           setLatestByKey((prev) => ({ ...prev, ...msg.data }))
           setHistoryByKey((prev) => {
@@ -92,5 +114,16 @@ export function useSensorSocket() {
     }
   }, [])
 
-  return { connected, port, dataRateHz, lastFrame, latestByKey, historyByKey, send }
+  return {
+    connected,
+    port,
+    dataRateHz,
+    recording,
+    sessionFile,
+    lastFrame,
+    latestByKey,
+    historyByKey,
+    clearHistory,
+    send,
+  }
 }

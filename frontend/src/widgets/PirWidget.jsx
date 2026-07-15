@@ -14,7 +14,7 @@ const TICK_WIDTH = 2
  * EKG-strip-style view of the raw HIGH/LOW signal (every reading, not just transitions) so
  * patterns like periodic false-triggering vs. genuine one-off motion are visible at a glance.
  */
-function PirWidget({ latestByKey, historyByKey }) {
+function PirWidget({ latestByKey, historyByKey, expanded, onToggleExpand, onHide, onClear }) {
   const active = latestByKey.PIR === 1
   const history = historyByKey.PIR ?? []
   const canvasRef = useRef(null)
@@ -45,7 +45,14 @@ function PirWidget({ latestByKey, historyByKey }) {
   }, [history])
 
   return (
-    <WidgetCard title="PIR Motion" accentColor={ACCENT}>
+    <WidgetCard
+      title="PIR Motion"
+      accentColor={ACCENT}
+      expanded={expanded}
+      onToggleExpand={onToggleExpand}
+      onHide={onHide}
+      onClear={onClear}
+    >
       <div className="mb-3 flex items-center gap-3">
         <span
           className={`h-4 w-4 rounded-full ${active ? 'bg-orange-500' : 'bg-neutral-700'}`}
@@ -73,8 +80,10 @@ function PirWidget({ latestByKey, historyByKey }) {
           <div className="text-neutral-600">No motion events yet</div>
         ) : (
           <ul className="space-y-0.5">
-            {events.map((t) => (
-              <li key={t}>{new Date(t).toLocaleTimeString()}</li>
+            {events.map((t, i) => (
+              // t (recvTs) alone isn't guaranteed unique — two rising edges can land in
+              // the same millisecond — so the index breaks ties.
+              <li key={`${t}-${i}`}>{new Date(t).toLocaleTimeString()}</li>
             ))}
           </ul>
         )}
