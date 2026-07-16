@@ -1,0 +1,32 @@
+export const COLS = 12
+export const STORAGE_KEY = 'sensor-dashboard:widget-layout:v1'
+
+// Roughly matches the pre-grid masonry order: ultrasonic+gy87 stacked in column 1,
+// pir+mpr121 stacked in column 2, joystick alone in column 3.
+export const DEFAULT_LAYOUT = {
+  ultrasonic: { x: 0, y: 0, w: 4, h: 8 },
+  pir: { x: 4, y: 0, w: 4, h: 4 },
+  joystick: { x: 8, y: 0, w: 4, h: 8 },
+  gy87: { x: 0, y: 8, w: 4, h: 8 },
+  mpr121: { x: 4, y: 4, w: 4, h: 8 },
+}
+
+const FALLBACK_W = 4
+const FALLBACK_H = 8
+
+export function reconcileLayout(savedItems, registryIds) {
+  const seen = new Set(savedItems.map((item) => item.i))
+  const result = [...savedItems]
+  let maxBottom = result.reduce((max, item) => Math.max(max, item.y + item.h), 0)
+
+  for (const id of registryIds) {
+    if (seen.has(id)) continue
+    const def = DEFAULT_LAYOUT[id]
+    const item = def ? { i: id, ...def } : { i: id, x: 0, y: maxBottom, w: FALLBACK_W, h: FALLBACK_H }
+    result.push(item)
+    maxBottom = Math.max(maxBottom, item.y + item.h)
+    seen.add(id)
+  }
+
+  return result
+}
