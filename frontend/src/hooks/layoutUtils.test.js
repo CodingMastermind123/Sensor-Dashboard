@@ -39,6 +39,15 @@ describe('reconcileLayout', () => {
       { i: 'brand-new-b', x: 0, y: 8, w: 4, h: 8 },
     ])
   })
+
+  it('de-dupes saved items sharing the same id, keeping the first occurrence', () => {
+    const saved = [
+      { i: 'ultrasonic', x: 0, y: 0, w: 4, h: 8 },
+      { i: 'ultrasonic', x: 5, y: 5, w: 4, h: 8 },
+    ]
+    const result = reconcileLayout(saved, ['ultrasonic'])
+    expect(result).toEqual([{ i: 'ultrasonic', x: 0, y: 0, w: 4, h: 8 }])
+  })
 })
 
 describe('COLS', () => {

@@ -15,8 +15,13 @@ const FALLBACK_W = 4
 const FALLBACK_H = 8
 
 export function reconcileLayout(savedItems, registryIds) {
-  const seen = new Set(savedItems.map((item) => item.i))
-  const result = [...savedItems]
+  const seen = new Set()
+  const result = []
+  for (const item of savedItems) {
+    if (seen.has(item.i)) continue
+    result.push(item)
+    seen.add(item.i)
+  }
   let maxBottom = result.reduce((max, item) => Math.max(max, item.y + item.h), 0)
 
   for (const id of registryIds) {
