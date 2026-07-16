@@ -4,11 +4,18 @@ function Dashboard({ latestByKey, historyByKey, widgetState, onToggleExpand, onH
   const visible = registry.filter((w) => widgetState[w.id]?.visible)
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+    // A CSS grid locks every card in a row to the same height (the tallest card's
+    // height), which left dead whitespace below shorter cards (e.g. PIR) before the
+    // next row started. Columns (masonry-style) let each column stack cards at their
+    // own natural height instead, so the gap between any two stacked cards is just gap-4.
+    <div className="columns-1 gap-4 p-4 sm:columns-2 lg:columns-3">
       {visible.map(({ id, Component, hasHistory }) => {
         const state = widgetState[id]
         return (
-          <div key={id} className={state.expanded ? 'sm:col-span-2 lg:col-span-3' : ''}>
+          <div
+            key={id}
+            className={`mb-4 break-inside-avoid ${state.expanded ? '[column-span:all]' : ''}`}
+          >
             <Component
               latestByKey={latestByKey}
               historyByKey={historyByKey}
