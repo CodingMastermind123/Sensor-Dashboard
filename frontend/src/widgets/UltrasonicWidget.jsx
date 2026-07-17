@@ -45,7 +45,7 @@ function UltrasonicWidget({ latestByKey, historyByKey, expanded, onToggleExpand,
         <span className="text-sm text-neutral-500">cm{stale && current != null ? ' (stale)' : ''}</span>
       </div>
 
-      <div className="h-40 w-full">
+      <div className="min-h-0 w-full flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={history}>
             <XAxis dataKey="t" hide />

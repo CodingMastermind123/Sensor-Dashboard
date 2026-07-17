@@ -44,7 +44,7 @@ function Gy87Widget({ latestByKey, historyByKey, expanded, onToggleExpand, onHid
         <span style={{ color: COLORS.yaw }}>yaw: {yaw != null ? yaw.toFixed(1) : '—'}°</span>
       </div>
 
-      <div className="h-44 w-full">
+      <div className="min-h-0 w-full flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <XAxis dataKey="t" hide />
