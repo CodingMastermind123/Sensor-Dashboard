@@ -54,3 +54,12 @@ export function collapseItem(items, id) {
     return { ...rest, ...prevLayout }
   })
 }
+
+export function mergeLayoutChange(fullItems, changedItems) {
+  const changedById = Object.fromEntries(changedItems.map((item) => [item.i, item]))
+  return fullItems.map((item) => {
+    const changed = changedById[item.i]
+    if (!changed) return item
+    return item.prevLayout ? { ...changed, prevLayout: item.prevLayout } : changed
+  })
+}

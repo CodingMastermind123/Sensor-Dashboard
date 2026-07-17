@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reconcileLayout, DEFAULT_LAYOUT, COLS, collapseItem, expandItem } from './layoutUtils.js'
+import { reconcileLayout, DEFAULT_LAYOUT, COLS, collapseItem, expandItem, mergeLayoutChange } from './layoutUtils.js'
 
 describe('reconcileLayout', () => {
   it('returns saved items unchanged when every registry id is already present', () => {
@@ -99,5 +99,33 @@ describe('collapseItem', () => {
     const expanded = expandItem(items, 'ultrasonic')
     const result = collapseItem(expanded, 'ultrasonic')
     expect(result).toEqual([{ i: 'ultrasonic', x: 4, y: 2, w: 4, h: 8, static: true }])
+  })
+})
+
+describe('mergeLayoutChange', () => {
+  it('updates x/y/w/h for items present in the changed set', () => {
+    const full = [{ i: 'ultrasonic', x: 0, y: 0, w: 4, h: 8 }]
+    const changed = [{ i: 'ultrasonic', x: 2, y: 1, w: 5, h: 9 }]
+    const result = mergeLayoutChange(full, changed)
+    expect(result).toEqual([{ i: 'ultrasonic', x: 2, y: 1, w: 5, h: 9 }])
+  })
+
+  it('preserves an existing prevLayout that the changed payload does not carry', () => {
+    const full = [
+      { i: 'ultrasonic', x: 0, y: 0, w: 12, h: 8, prevLayout: { x: 4, y: 0, w: 4, h: 8 } },
+    ]
+    const changed = [{ i: 'ultrasonic', x: 0, y: 0, w: 12, h: 10 }]
+    const result = mergeLayoutChange(full, changed)
+    expect(result).toEqual([
+      { i: 'ultrasonic', x: 0, y: 0, w: 12, h: 10, prevLayout: { x: 4, y: 0, w: 4, h: 8 } },
+    ])
+  })
+
+  it('leaves items not present in the changed set (hidden widgets) completely untouched', () => {
+    const hidden = { i: 'pir', x: 4, y: 0, w: 4, h: 4 }
+    const full = [{ i: 'ultrasonic', x: 0, y: 0, w: 4, h: 8 }, hidden]
+    const changed = [{ i: 'ultrasonic', x: 1, y: 1, w: 5, h: 9 }]
+    const result = mergeLayoutChange(full, changed)
+    expect(result[1]).toBe(hidden)
   })
 })
