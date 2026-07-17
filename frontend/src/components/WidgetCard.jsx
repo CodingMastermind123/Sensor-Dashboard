@@ -7,6 +7,9 @@ const ICON_BUTTON_CLASS =
  * own — callers (widget components, forwarding props threaded down from Dashboard.jsx)
  * own expanded/visibility state. A control button only renders if its handler is passed
  * (e.g. `onClear` is omitted for widgets with `hasHistory: false` in the registry).
+ * The header carries `widget-drag-handle` (react-grid-layout's `draggableHandle`
+ * selector) so only it can start a drag — every button additionally stops the
+ * mousedown from propagating so a click never gets swallowed as a drag-start.
  */
 function WidgetCard({
   title,
@@ -18,8 +21,8 @@ function WidgetCard({
   children,
 }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="flex h-full flex-col rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+      <div className="widget-drag-handle mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
           <span
             className="h-2 w-2 rounded-full"
@@ -32,6 +35,7 @@ function WidgetCard({
           {onToggleExpand && (
             <button
               type="button"
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={onToggleExpand}
               className={ICON_BUTTON_CLASS}
               title={expanded ? 'Collapse' : 'Expand to full width'}
@@ -43,6 +47,7 @@ function WidgetCard({
           {onClear && (
             <button
               type="button"
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={onClear}
               className={ICON_BUTTON_CLASS}
               title="Clear history"
@@ -54,6 +59,7 @@ function WidgetCard({
           {onHide && (
             <button
               type="button"
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={onHide}
               className={ICON_BUTTON_CLASS}
               title="Hide widget"
@@ -64,7 +70,7 @@ function WidgetCard({
           )}
         </div>
       </div>
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   )
 }
