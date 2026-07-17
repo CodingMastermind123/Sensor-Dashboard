@@ -1,33 +1,55 @@
+import GridLayout from 'react-grid-layout'
 import { registry } from '../widgets/registry.js'
+import { useWidgetLayout } from '../hooks/useWidgetLayout.js'
+import { useContainerWidth } from '../hooks/useContainerWidth.js'
+import { COLS } from '../hooks/layoutUtils.js'
 
-function Dashboard({ latestByKey, historyByKey, widgetState, onToggleExpand, onHide, onClearHistory }) {
+const ROW_HEIGHT = 30
+const MARGIN = [16, 16]
+
+function Dashboard({ latestByKey, historyByKey, widgetState, onHide, onClearHistory }) {
   const visible = registry.filter((w) => widgetState[w.id]?.visible)
+  const visibleIds = visible.map((w) => w.id)
+  const registryIds = registry.map((w) => w.id)
+
+  const { visibleLayout, onLayoutChange, expandWidget, collapseWidget } = useWidgetLayout(registryIds)
+  const [containerRef, containerWidth] = useContainerWidth()
+
+  const items = visibleLayout(visibleIds)
 
   return (
-    // A CSS grid locks every card in a row to the same height (the tallest card's
-    // height), which left dead whitespace below shorter cards (e.g. PIR) before the
-    // next row started. Columns (masonry-style) let each column stack cards at their
-    // own natural height instead, so the gap between any two stacked cards is just gap-4.
-    <div className="columns-1 gap-4 p-4 sm:columns-2 lg:columns-3">
-      {visible.map(({ id, Component, hasHistory }) => {
-        const state = widgetState[id]
-        return (
-          <div
-            key={id}
-            className={`mb-4 break-inside-avoid ${state.expanded ? '[column-span:all]' : ''}`}
-          >
-            <Component
-              latestByKey={latestByKey}
-              historyByKey={historyByKey}
-              expanded={state.expanded}
-              onToggleExpand={() => onToggleExpand(id)}
-              onHide={() => onHide(id)}
-              onClear={hasHistory ? () => onClearHistory(id) : undefined}
-              resetToken={state.resetToken}
-            />
-          </div>
-        )
-      })}
+    <div ref={containerRef} className="p-4">
+      {containerWidth > 0 && (
+        <GridLayout
+          cols={COLS}
+          rowHeight={ROW_HEIGHT}
+          width={containerWidth}
+          margin={MARGIN}
+          draggableHandle=".widget-drag-handle"
+          layout={items}
+          onLayoutChange={onLayoutChange}
+        >
+          {visible.map(({ id, Component, hasHistory }) => {
+            const state = widgetState[id]
+            const item = items.find((it) => it.i === id)
+            const expanded = item?.w === COLS
+
+            return (
+              <div key={id}>
+                <Component
+                  latestByKey={latestByKey}
+                  historyByKey={historyByKey}
+                  expanded={expanded}
+                  onToggleExpand={() => (expanded ? collapseWidget(id) : expandWidget(id))}
+                  onHide={() => onHide(id)}
+                  onClear={hasHistory ? () => onClearHistory(id) : undefined}
+                  resetToken={state.resetToken}
+                />
+              </div>
+            )
+          })}
+        </GridLayout>
+      )}
     </div>
   )
 }
