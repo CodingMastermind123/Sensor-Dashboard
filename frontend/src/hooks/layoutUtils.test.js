@@ -93,4 +93,11 @@ describe('collapseItem', () => {
     const result = collapseItem(items, 'ultrasonic')
     expect(result).toEqual(items)
   })
+
+  it('preserves fields beyond x/y/w/h/i (e.g. ones react-grid-layout attaches) through an expand/collapse round trip', () => {
+    const items = [{ i: 'ultrasonic', x: 4, y: 2, w: 4, h: 8, static: true }]
+    const expanded = expandItem(items, 'ultrasonic')
+    const result = collapseItem(expanded, 'ultrasonic')
+    expect(result).toEqual([{ i: 'ultrasonic', x: 4, y: 2, w: 4, h: 8, static: true }])
+  })
 })

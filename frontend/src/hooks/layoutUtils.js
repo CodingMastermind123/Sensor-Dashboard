@@ -44,10 +44,13 @@ export function expandItem(items, id) {
   })
 }
 
+// If the item was manually dragged/resized while expanded, prevLayout still holds
+// its pre-expand position/size (only expandItem writes it) — collapse always reverts
+// to that, discarding any in-between manual changes made while expanded.
 export function collapseItem(items, id) {
   return items.map((item) => {
     if (item.i !== id || !item.prevLayout) return item
-    const { i } = item
-    return { i, ...item.prevLayout }
+    const { prevLayout, ...rest } = item
+    return { ...rest, ...prevLayout }
   })
 }
