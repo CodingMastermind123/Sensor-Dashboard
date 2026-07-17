@@ -70,7 +70,7 @@ function WidgetCard({
           )}
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
     </div>
   )
 }
