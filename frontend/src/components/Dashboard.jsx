@@ -20,12 +20,17 @@ function Dashboard({ latestByKey, historyByKey, widgetState, onHide, onClearHist
   return (
     <div ref={containerRef} className="p-4">
       {containerWidth > 0 && (
+        // react-grid-layout 2.x's default GridLayout export takes a composable
+        // gridConfig/dragConfig/resizeConfig object API, not v1's flat cols/
+        // rowHeight/margin/draggableHandle props — passing those directly is
+        // silently accepted (no error, no warning) but ignored, falling back to
+        // the library's own defaults (rowHeight 150, margin [10,10], no drag
+        // handle restriction at all). Only caught via manual browser testing;
+        // `npm run build` and a plain code diff can't detect it.
         <GridLayout
-          cols={COLS}
-          rowHeight={ROW_HEIGHT}
+          gridConfig={{ cols: COLS, rowHeight: ROW_HEIGHT, margin: MARGIN }}
+          dragConfig={{ handle: '.widget-drag-handle' }}
           width={containerWidth}
-          margin={MARGIN}
-          draggableHandle=".widget-drag-handle"
           layout={items}
           onLayoutChange={onLayoutChange}
         >
