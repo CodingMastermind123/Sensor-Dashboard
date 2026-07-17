@@ -6,9 +6,7 @@ import Sidebar from './components/Sidebar.jsx'
 import Dashboard from './components/Dashboard.jsx'
 
 function initialWidgetState() {
-  return Object.fromEntries(
-    registry.map((w) => [w.id, { visible: true, expanded: false, resetToken: 0 }]),
-  )
+  return Object.fromEntries(registry.map((w) => [w.id, { visible: true, resetToken: 0 }]))
 }
 
 function App() {
@@ -21,10 +19,6 @@ function App() {
 
   function toggleVisible(id) {
     setWidgetState((prev) => ({ ...prev, [id]: { ...prev[id], visible: !prev[id].visible } }))
-  }
-
-  function toggleExpand(id) {
-    setWidgetState((prev) => ({ ...prev, [id]: { ...prev[id], expanded: !prev[id].expanded } }))
   }
 
   function hideWidget(id) {
@@ -56,7 +50,6 @@ function App() {
             latestByKey={latestByKey}
             historyByKey={historyByKey}
             widgetState={widgetState}
-            onToggleExpand={toggleExpand}
             onHide={hideWidget}
             onClearHistory={clearWidgetHistory}
           />
