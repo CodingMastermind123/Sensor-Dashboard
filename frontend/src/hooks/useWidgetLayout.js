@@ -10,6 +10,14 @@ function loadStoredLayout() {
   }
 }
 
+function saveStoredLayout(layout) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+  } catch {
+    // Storage unavailable/full (e.g. private browsing) — layout just won't persist.
+  }
+}
+
 /**
  * Owns the full per-widget layout array (position + size for every registry id,
  * including currently-hidden ones) and its localStorage persistence. Display-only
@@ -19,7 +27,7 @@ export function useWidgetLayout(registryIds) {
   const [layout, setLayout] = useState(() => reconcileLayout(loadStoredLayout(), registryIds))
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+    saveStoredLayout(layout)
   }, [layout])
 
   const visibleLayout = useCallback(
