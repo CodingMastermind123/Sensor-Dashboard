@@ -21,7 +21,7 @@ function WidgetCard({
   children,
 }) {
   return (
-    <div className="flex h-full flex-col rounded-lg border border-white/10 bg-neutral-900/70 p-4 shadow-lg shadow-black/40">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-white/10 bg-neutral-900/70 p-4 shadow-lg shadow-black/40">
       <div className="widget-drag-handle mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
           <span
