@@ -35,3 +35,19 @@ export function reconcileLayout(savedItems, registryIds) {
 
   return result
 }
+
+export function expandItem(items, id) {
+  return items.map((item) => {
+    if (item.i !== id || item.w === COLS) return item
+    const { x, y, w, h } = item
+    return { ...item, x: 0, w: COLS, prevLayout: { x, y, w, h } }
+  })
+}
+
+export function collapseItem(items, id) {
+  return items.map((item) => {
+    if (item.i !== id || !item.prevLayout) return item
+    const { i } = item
+    return { i, ...item.prevLayout }
+  })
+}

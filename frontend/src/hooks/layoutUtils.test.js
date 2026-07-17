@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reconcileLayout, DEFAULT_LAYOUT, COLS } from './layoutUtils.js'
+import { reconcileLayout, DEFAULT_LAYOUT, COLS, collapseItem, expandItem } from './layoutUtils.js'
 
 describe('reconcileLayout', () => {
   it('returns saved items unchanged when every registry id is already present', () => {
@@ -53,5 +53,44 @@ describe('reconcileLayout', () => {
 describe('COLS', () => {
   it('is 12', () => {
     expect(COLS).toBe(12)
+  })
+})
+
+describe('expandItem', () => {
+  it('sets w to COLS and x to 0, saving the prior position/size as prevLayout', () => {
+    const items = [{ i: 'ultrasonic', x: 4, y: 2, w: 4, h: 8 }]
+    const result = expandItem(items, 'ultrasonic')
+    expect(result).toEqual([
+      { i: 'ultrasonic', x: 0, y: 2, w: COLS, h: 8, prevLayout: { x: 4, y: 2, w: 4, h: 8 } },
+    ])
+  })
+
+  it('leaves other items untouched', () => {
+    const other = { i: 'pir', x: 4, y: 0, w: 4, h: 4 }
+    const items = [{ i: 'ultrasonic', x: 0, y: 0, w: 4, h: 8 }, other]
+    const result = expandItem(items, 'ultrasonic')
+    expect(result[1]).toBe(other)
+  })
+
+  it('is a no-op if the item is already expanded (w === COLS)', () => {
+    const items = [{ i: 'ultrasonic', x: 0, y: 0, w: COLS, h: 8 }]
+    const result = expandItem(items, 'ultrasonic')
+    expect(result).toEqual(items)
+  })
+})
+
+describe('collapseItem', () => {
+  it('restores x/y/w/h from prevLayout and removes prevLayout', () => {
+    const items = [
+      { i: 'ultrasonic', x: 0, y: 2, w: COLS, h: 8, prevLayout: { x: 4, y: 2, w: 4, h: 8 } },
+    ]
+    const result = collapseItem(items, 'ultrasonic')
+    expect(result).toEqual([{ i: 'ultrasonic', x: 4, y: 2, w: 4, h: 8 }])
+  })
+
+  it('is a no-op when there is no prevLayout to restore', () => {
+    const items = [{ i: 'ultrasonic', x: 0, y: 0, w: 4, h: 8 }]
+    const result = collapseItem(items, 'ultrasonic')
+    expect(result).toEqual(items)
   })
 })
