@@ -14,3 +14,8 @@ body {
 #root {
   min-height: 100svh;
 }
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 0.5rem;
+}
