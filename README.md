@@ -37,6 +37,40 @@ To run against a real Arduino Uno R4 instead, set `SERIAL_SOURCE=real` and
 - Node.js LTS (24.x, pinned in `.nvmrc`) — **not** Node 25, which is end-of-life.
 - `nvm` to manage the Node version (`brew install nvm`).
 
+## Wiring
+
+Board: Arduino Uno R4 (Minima/WiFi), Renesas core. Pin assignments as declared in
+[`arduino/sensor_dashboard/sensor_dashboard.ino`](./arduino/sensor_dashboard/sensor_dashboard.ino):
+
+| Sensor | Signal | Arduino pin | Notes |
+| --- | --- | --- | --- |
+| HC-SR04 (ultrasonic) | VCC | 5V | |
+| | GND | GND | |
+| | Trig | D3 | |
+| | Echo | D4 | |
+| PIR (HC-SR501 style) | VCC | 5V | |
+| | GND | GND | |
+| | OUT | D2 | |
+| Joystick module | VCC | 5V | |
+| | GND | GND | |
+| | VRx | A0 | |
+| | VRy | A1 | |
+| GY-87 (MPU6050 + QMC5883L) | VCC | 5V | |
+| | GND | GND | |
+| | SDA | SDA | MPU6050 at `0x68`; QMC5883L at `0x0D`, reached via MPU6050 I2C bypass mode |
+| | SCL | SCL | |
+| MPR121 (capacitive touch) | VCC | **3.3V** (not 5V) | |
+| | GND | GND | |
+| | SDA | SDA | shares the bus with the GY-87, no address conflict |
+| | SCL | SCL | |
+| | ADDR | unconnected | default address `0x5A` |
+| | IRQ | unconnected | polled, not interrupt-driven |
+
+SDA/SCL are the board's dedicated I2C pins (shared bus for GY-87 + MPR121), not general digital
+pins. See the header comment in the `.ino` file and the "Hardware bring-up notes" section of
+[CLAUDE.md](./CLAUDE.md) for wiring history and gotchas (e.g. Trig/Echo were originally on
+A1/A2 before being moved to D3/D4).
+
 ## Folder map
 
 ```

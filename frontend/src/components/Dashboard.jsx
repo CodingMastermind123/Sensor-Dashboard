@@ -1,4 +1,5 @@
 import GridLayout from 'react-grid-layout'
+import { gridBounds, minMaxSize, aspectRatio } from 'react-grid-layout/core'
 import { registry } from '../widgets/registry.js'
 import { useWidgetLayout } from '../hooks/useWidgetLayout.js'
 import { useContainerWidth } from '../hooks/useContainerWidth.js'
@@ -6,6 +7,26 @@ import { COLS } from '../hooks/layoutUtils.js'
 
 const ROW_HEIGHT = 30
 const MARGIN = [16, 16]
+
+const LOCKED_ASPECT_IDS = new Set(registry.filter((w) => w.lockAspectRatio).map((w) => w.id))
+const SQUARE_ASPECT = aspectRatio(1)
+// react-grid-layout's own cloneLayoutItem only copies a fixed field whitelist that
+// excludes `constraints` — a per-item constraint gets silently dropped every time the
+// library clones the layout internally (every sync/compact pass), which desyncs the
+// prop we pass from the state RGL settles on and loops onLayoutChange forever. A
+// grid-level constraint isn't attached to layout items, so it never goes through that
+// clone path — it just checks item.i itself instead of applying to everything.
+const GRID_CONSTRAINTS = [
+  gridBounds,
+  minMaxSize,
+  {
+    name: 'lockedAspectRatio',
+    constrainSize(item, w, h, handle, context) {
+      if (!LOCKED_ASPECT_IDS.has(item.i)) return { w, h }
+      return SQUARE_ASPECT.constrainSize(item, w, h, handle, context)
+    },
+  },
+]
 
 function Dashboard({ latestByKey, historyByKey, widgetState, onHide, onClearHistory }) {
   const visible = registry.filter((w) => widgetState[w.id]?.visible)
@@ -30,6 +51,7 @@ function Dashboard({ latestByKey, historyByKey, widgetState, onHide, onClearHist
         <GridLayout
           gridConfig={{ cols: COLS, rowHeight: ROW_HEIGHT, margin: MARGIN }}
           dragConfig={{ handle: '.widget-drag-handle' }}
+          constraints={GRID_CONSTRAINTS}
           width={containerWidth}
           layout={items}
           onLayoutChange={onLayoutChange}

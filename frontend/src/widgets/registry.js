@@ -36,6 +36,7 @@ export const registry = [
     accentColor: '#a78bfa',
     keys: ['JOY'],
     hasHistory: true,
+    lockAspectRatio: true,
     Component: JoystickWidget,
   },
   {
